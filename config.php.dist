@@ -1,0 +1,13 @@
+<?php
+$apiPassphrase = '';
+$apiKey        = '';
+$apiSecret     = '';
+
+$activeTrade   = 0;
+$percentToSell = 99;
+$percentToBuy  = 99;
+$blocks        = 22;
+$volatility    = 5.94;
+$macdShort     = 14;
+$macdLong      = 25;
+$macdLongMax   = 32;

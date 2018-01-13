@@ -1,0 +1,5 @@
+{
+    "require": {
+        "hellovoid/gdax": "^1.0"
+    }
+}
