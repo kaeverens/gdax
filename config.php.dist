@@ -3,6 +3,8 @@ $apiPassphrase = '';
 $apiKey        = '';
 $apiSecret     = '';
 
+$currency      = 'EUR';
+
 $activeTrade   = 0;
 $percentToSell = 99;
 $percentToBuy  = 99;

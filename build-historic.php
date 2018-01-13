@@ -13,7 +13,7 @@ catch(Exception $e) {
 	echo $e->getMessage();
 	exit;
 }
-$l=`tail -1 data/LTC-EUR-historic`;
+$l=`tail -1 data/LTC-$currency-historic`;
 $from=0;
 if ($l) {
 	$l=json_decode(trim($l), true);
@@ -25,7 +25,7 @@ if (!$from) {
 	$from=strtotime('2017-06-01 00:00:00');
 }
 do {
-	$data=$client->getProductHistoricRates('LTC-EUR', [
+	$data=$client->getProductHistoricRates('LTC-'.$currency, [
 		'start'=>date('c', $from),
 		'end'=>date('c', $from+3601),
 		'granularity'=>'60'
@@ -39,7 +39,7 @@ do {
 				$from=$d[0];
 			}
 			echo date('c', $d[0]).' '.json_encode($d)."\n";
-			file_put_contents('data/LTC-EUR-historic', json_encode($d)."\n", FILE_APPEND);
+			file_put_contents('data/LTC-'.$currency.'-historic', json_encode($d)."\n", FILE_APPEND);
 		}
 		if ($fromChanged) {
 			$from+=1;

@@ -4,7 +4,7 @@ require_once 'lib.php';
 
 $exportToFile=false;
 
-$startupEur=12;
+$startupEur=100000;
 $startupLtc=0; // $startupEur/1000;
 
 $buyMin=99;
@@ -29,23 +29,22 @@ $macdLongMin=25;
 $macdLongMax=25;
 
 // { setup data
-$data=[
-	'LTC-EUR'=>file('data/LTC-EUR-historic')
-];
-foreach ($data['LTC-EUR'] as $k=>$v) {
-	$data['LTC-EUR'][$k]=json_decode($v, true);
+$data=[];
+$data['LTC-'.$currency]=file('data/LTC-'.$currency.'-historic');
+foreach ($data['LTC-'.$currency] as $k=>$v) {
+	$data['LTC-'.$currency][$k]=json_decode($v, true);
 	if ($k) { // calculate True Range
-		$m1=abs($data['LTC-EUR'][$k][2]-$data['LTC-EUR'][$k][1]);
-		$m2=abs($data['LTC-EUR'][$k][2]-$data['LTC-EUR'][$k-1][4]);
-		$m3=abs($data['LTC-EUR'][$k][1]-$data['LTC-EUR'][$k-1][4]);
-		$data['LTC-EUR'][$k][6]=max($m1, $m2, $m3); // TR
-		$data['LTC-EUR'][$k][7]=0; // will be ATR
-		$data['LTC-EUR'][$k][8]=0; // will be max highs
-		$data['LTC-EUR'][$k][9]=[0]; // will be avgs
+		$m1=abs($data['LTC-'.$currency][$k][2]-$data['LTC-'.$currency][$k][1]);
+		$m2=abs($data['LTC-'.$currency][$k][2]-$data['LTC-'.$currency][$k-1][4]);
+		$m3=abs($data['LTC-'.$currency][$k][1]-$data['LTC-'.$currency][$k-1][4]);
+		$data['LTC-'.$currency][$k][6]=max($m1, $m2, $m3); // TR
+		$data['LTC-'.$currency][$k][7]=0; // will be ATR
+		$data['LTC-'.$currency][$k][8]=0; // will be max highs
+		$data['LTC-'.$currency][$k][9]=[0]; // will be avgs
 	}
 	if ($k>$macdLongMax) {
 		for ($j=1;$j<=$macdLongMax;++$j) {
-			$data['LTC-EUR'][$k][9][$j]=($data['LTC-EUR'][$k-1][9][$j]*($j-1)+$data['LTC-EUR'][$k][3])/$j;
+			$data['LTC-'.$currency][$k][9][$j]=($data['LTC-'.$currency][$k-1][9][$j]*($j-1)+$data['LTC-'.$currency][$k][3])/$j;
 		}
 	}
 }
@@ -58,19 +57,19 @@ for ($blocks=$minBlocks; $blocks<=$maxBlocks; ++$blocks) {
 	// { recalculate ATRs
 	$sum=0;
 	for ($i=1;$i<$blocks+1;++$i) {
-		$sum+=$data['LTC-EUR'][$i][6];
+		$sum+=$data['LTC-'.$currency][$i][6];
 	}
-	$data['LTC-EUR'][$i][7]=$sum/$blocks; // true ATR
-	for ($i=$blocks+1;$i<count($data['LTC-EUR']);++$i) {
-		$data['LTC-EUR'][$i][7]=($data['LTC-EUR'][$i-1][7]*($blocks-1)+$data['LTC-EUR'][$i][6])/$blocks;
+	$data['LTC-'.$currency][$i][7]=$sum/$blocks; // true ATR
+	for ($i=$blocks+1;$i<count($data['LTC-'.$currency]);++$i) {
+		$data['LTC-'.$currency][$i][7]=($data['LTC-'.$currency][$i-1][7]*($blocks-1)+$data['LTC-'.$currency][$i][6])/$blocks;
 	}
 	$highs=[];
-	for ($i=0;$i<count($data['LTC-EUR']);++$i) {
-		$highs[]=$data['LTC-EUR'][$i][2];
+	for ($i=0;$i<count($data['LTC-'.$currency]);++$i) {
+		$highs[]=$data['LTC-'.$currency][$i][2];
 		if (count($highs)>$blocks) {
 			array_shift($highs);
 		}
-		$data['LTC-EUR'][$i][8]=max($highs);
+		$data['LTC-'.$currency][$i][8]=max($highs);
 	}
 	// }
 	for ($percentToSell=$sellMin; $percentToSell<=$sellMax;$percentToSell+=$sellInc) {
@@ -79,9 +78,9 @@ for ($blocks=$minBlocks; $blocks<=$maxBlocks; ++$blocks) {
 				for ($macdLong=$macdLongMin; $macdLong<=$macdLongMax; $macdLong++) {
 					for ($macdShort=$macdShortMin; $macdShort<$macdLong && $macdShort<=$macdShortMax; $macdShort++) {
 						if ($exportToFile) {
-							file_put_contents('data/test.tsv', "date	low	high	open	close	volume	TR	ATR	max	avg short	avg long	holding	EUR	LTC	note\n");
+							file_put_contents('data/test.tsv', "date	low	high	open	close	volume	TR	ATR	max	avg short	avg long	holding	$currency	LTC	note\n");
 						}
-						#$data_at=47856; // november 1
+						$data_at=47856; // november 1
 						#$data_at=67545; // december 1
 						#$data_at=82000; // december 14
 						#$data_at=102193; // Jan 1
@@ -91,18 +90,18 @@ for ($blocks=$minBlocks; $blocks<=$maxBlocks; ++$blocks) {
 						#$data_at=106999; // Jan 5
 						#$data_at=109586; // Jan 7
 						#$data_at=112040; // Jan 9
-						$data_at=114459; // Jan 11
+						#$data_at=114459; // Jan 11
 						$orderRecords=[];
 						$GLOBALS['accountsByCurrency']=[ // {
-							'EUR'=>[
-								'balance'=>$startupEur,
-								'available'=>$startupEur
-							],
 							'LTC'=>[
 								'balance'=>$startupLtc,
 								'available'=>$startupLtc
 							]
 						]; // }
+						$GLOBALS['accountsByCurrency'][$currency]=[
+							'balance'=>$startupEur,
+							'available'=>$startupEur
+						];
 						$sales=0;
 						$purchases=0;
 						do {
@@ -110,7 +109,7 @@ for ($blocks=$minBlocks; $blocks<=$maxBlocks; ++$blocks) {
 							$sales+=$ret['sell'];
 							$purchases+=$ret['buy'];
 							$go_again=1;
-							if ($data_at==count($data['LTC-EUR'])-1) {
+							if ($data_at==count($data['LTC-'.$currency])-1) {
 								$go_again=0;
 							}
 							$block=$ret['block'];

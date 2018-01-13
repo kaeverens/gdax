@@ -8,9 +8,9 @@ $client = Client::create($configuration);
 $orderRecords=[];
 
 function buy($avg) {
-	global $percentToBuy;
+	global $percentToBuy, $currency;
 	$accountsByCurrency=getAccountsByCurrency();
-	$amtToTransfer=($accountsByCurrency['EUR']['available']*$percentToBuy*.01)/$avg;
+	$amtToTransfer=($accountsByCurrency[$currency]['available']*$percentToBuy*.01)/$avg;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.01) {
 		$buyPrice=floor($avg*100)/100;
@@ -18,7 +18,7 @@ function buy($avg) {
 		    'size'       => $amtToTransfer,
 		    'price'      => $buyPrice,
 		    'side'       => 'buy',
-		    'product_id' => 'LTC-EUR'
+		    'product_id' => 'LTC-'.$currency
 		];
 		placeOrder($params, -$amtToTransfer*$buyPrice, $amtToTransfer);
 		return 1;
@@ -26,7 +26,7 @@ function buy($avg) {
 	return 0;
 }
 function sell($avg) {
-	global $percentToSell;
+	global $percentToSell, $currency;
 	$accountsByCurrency=getAccountsByCurrency();
 	$amtToTransfer=$accountsByCurrency['LTC']['available']*$percentToSell*.01;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
@@ -35,7 +35,7 @@ function sell($avg) {
 		    'size'       => $amtToTransfer,
 		    'price'      => floor($avg*100)/100,
 		    'side'       => 'sell',
-		    'product_id' => 'LTC-EUR'
+		    'product_id' => 'LTC-'.$currency
 		];
 		placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
 		return 1;
@@ -144,12 +144,12 @@ function placeOrder($params, $cash, $crypto) {
 	$GLOBALS['orderRecords'][]=$params;
 }
 function runOne() {
-	global $blocks, $volatility, $macdShort, $macdLong;
+	global $blocks, $volatility, $macdShort, $macdLong, $currency;
 	$str='';
 	$sell=0;
 	$buy=0;
-	// { LTC/EUR
-	$history=getProductHistoricRates('LTC-EUR', 200); // get some data
+	// { LTC
+	$history=getProductHistoricRates('LTC-'.$currency, 200); // get some data
 	$avg=$history[0][4]; // get current coin value;
 	$chandelierStop=$history[0][2]-$history[0][7]*$volatility; // high - ATR*volitility
 	$history[0][10]='';
@@ -184,8 +184,8 @@ function runOne() {
 	// }
 	$accountsByCurrency=getAccountsByCurrency();
 	$report=date('Y-m-d H:i:s', $history[0][0]) // {
-		.'	'.($accountsByCurrency['EUR']['balance']+($accountsByCurrency['LTC']['balance']*$avg))
-		.'	'.$accountsByCurrency['EUR']['balance']
+		.'	'.($accountsByCurrency[$currency]['balance']+($accountsByCurrency['LTC']['balance']*$avg))
+		.'	'.$accountsByCurrency[$currency]['balance']
 		.'	'.$accountsByCurrency['LTC']['balance']."\n"; // }
 	return [
 		'str'=>$str,
