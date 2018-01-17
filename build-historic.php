@@ -13,6 +13,10 @@ catch(Exception $e) {
 	echo $e->getMessage();
 	exit;
 }
+// { pre sort and uniq
+$cmd='sort data/LTC-'.$currency.'-historic | uniq > data/LTC-'.$currency.'-historic.tmp && mv data/LTC-'.$currency.'-historic.tmp data/LTC-'.$currency.'-historic';
+`$cmd`;
+// }
 $l=`tail -1 data/LTC-$currency-historic`;
 $from=0;
 if ($l) {
@@ -53,3 +57,31 @@ do {
 	}
 	sleep(1);
 } while($from<time()-3600);
+echo "sorting and discarding duplicates\n";
+$cmd='sort data/LTC-'.$currency.'-historic | uniq > data/LTC-'.$currency.'-historic.tmp && mv data/LTC-'.$currency.'-historic.tmp data/LTC-'.$currency.'-historic';
+`$cmd`;
+echo "filling in gaps\n";
+$lines=file('data/LTC-'.$currency.'-historic');
+$numLines=count($lines);
+$newLines=[];
+$line=json_decode($lines[0], true);
+$newLines[]=trim($lines[0]);
+$at=$line[0];
+$lastline=$line;
+for ($i=1; $i<$numLines; ++$i) {
+	$line=json_decode($lines[$i], true);
+	if ($line[0]==$at) { // duplicate time stamp
+		continue;
+	}
+	for ($j=$at+60; $j<$line[0]; $j+=60) { // fill in the minutes where nothing happened
+		$line2=$lastline;
+		$line2[0]=$j;
+		$line2=json_encode($line2);
+		$newLines[]=$line2;
+	}
+	$at=$line[0];
+	$lastline=$line;
+	$line=json_encode($line);
+	$newLines[]=$line;
+}
+file_put_contents('data/LTC-'.$currency.'-historic', join("\n", $newLines));

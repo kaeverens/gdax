@@ -3,13 +3,64 @@ $apiPassphrase = '';
 $apiKey        = '';
 $apiSecret     = '';
 
-$currency      = 'EUR';
+$currency       = 'EUR';
 
-$activeTrade   = 0;
-$percentToSell = 99;
-$percentToBuy  = 99;
-$blocks        = 22;
-$volatility    = 5.94;
-$macdShort     = 14;
-$macdLong      = 25;
-$macdLongMax   = 32;
+$activeTrade    = 0;
+$percentToSell  = 99;
+$percentToBuy   = 99;
+$blocks         = 6;
+$volatility     = 5.5;
+$smaEmaMix      = 14;
+$smaShort       = 38;
+$smaLong        = 39;
+$emaShort       = 3;
+$emaLong        = 21;
+
+
+// the following are used in the run-test.php script. if you trust the above figures, you don't need to mess with the below
+
+$exportToFile=false;
+
+$startupEur=5000;
+$startupLtc=0; // $startupEur/1000;
+
+$buyMin=99;
+$buyMax=99;
+$buyInc= 1;
+
+$sellMin=99;
+$sellMax=99;
+$sellInc= 1;
+
+$minBlocks=6;
+$maxBlocks=6;
+
+$volatilityMin=5.5;
+$volatilityMax=5.5;
+$volatilityInc=0.05;
+
+$smaEmaMixMin=14;
+$smaEmaMixMax=14;
+
+$smaShortMin=38;
+$smaShortMax=38;
+
+$smaLongMin=39;
+$smaLongMax=39;
+
+$emaShortMin=3;
+$emaShortMax=3;
+
+$emaLongMin=21;
+$emaLongMax=21;
+
+$data_start_at=explode("\n", 
+"330342
+328902
+326022
+320262
+308742
+285702
+239622
+147462"
+)[ 0];
