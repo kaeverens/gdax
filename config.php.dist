@@ -1,66 +1,69 @@
 <?php
-$apiPassphrase = '';
-$apiKey        = '';
-$apiSecret     = '';
+$apiPassphrase='';
+$apiKey='';
+$apiSecret='';
 
 $currency       = 'EUR';
 
 $activeTrade    = 0;
 $percentToSell  = 99;
 $percentToBuy   = 99;
-$blocks         = 6;
-$volatility     = 5.5;
+$blocks         = 18;
+$volatility     = 5.6;
 $smaEmaMix      = 14;
-$smaShort       = 38;
-$smaLong        = 39;
-$emaShort       = 3;
-$emaLong        = 21;
+$smaBuyShort    = 28;
+$smaBuyLong     = 39;
+$smaSellShort   = 34;
+$smaSellLong    = 46;
+$emaBuyShort    = 60;
+$emaBuyLong     = 67;
+$emaSellShort   = 52;
+$emaSellLong    = 71;
 
 
 // the following are used in the run-test.php script. if you trust the above figures, you don't need to mess with the below
 
 $exportToFile=false;
-
 $startupEur=5000;
 $startupLtc=0; // $startupEur/1000;
-
-$buyMin=99;
-$buyMax=99;
-$buyInc= 1;
-
-$sellMin=99;
-$sellMax=99;
-$sellInc= 1;
-
-$minBlocks=6;
-$maxBlocks=6;
-
-$volatilityMin=5.5;
-$volatilityMax=5.5;
-$volatilityInc=0.05;
-
 $smaEmaMixMin=14;
 $smaEmaMixMax=14;
+$buyMin=99;
+$buyMax=99;
+$buyInc= 0.1;
+$sellMin=99;
+$sellMax=99;
+$sellInc= 0.1;
 
-$smaShortMin=38;
-$smaShortMax=38;
-
-$smaLongMin=39;
-$smaLongMax=39;
-
-$emaShortMin=3;
-$emaShortMax=3;
-
-$emaLongMin=21;
-$emaLongMax=21;
+$minBlocks=18;
+$maxBlocks=18;
+$volatilityMin=5.60;
+$volatilityMax=5.60;
+$volatilityInc=0.01;
+$smaBuyShortMin=28;
+$smaBuyShortMax=28;
+$smaBuyLongMin=39;
+$smaBuyLongMax=39;
+$smaSellShortMin=34;
+$smaSellShortMax=34;
+$smaSellLongMin=46;
+$smaSellLongMax=46;
+$emaBuyShortMin=60;
+$emaBuyShortMax=60;
+$emaBuyLongMin=67;
+$emaBuyLongMax=67;
+$emaSellShortMin=52;
+$emaSellShortMax=52;
+$emaSellLongMin=71;
+$emaSellLongMax=71;
 
 $data_start_at=explode("\n", 
-"330342
-328902
-326022
-320262
-308742
-285702
-239622
-147462"
-)[ 0];
+"332113
+330673
+327793
+322033
+310513
+287473
+241393
+149233"
+)[ 5];
