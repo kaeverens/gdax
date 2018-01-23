@@ -10,13 +10,16 @@ $orderRecords=[];
 function buy($avg) {
 	global $percentToBuy, $currency;
 	$accountsByCurrency=getAccountsByCurrency();
+	$funds=floor($accountsByCurrency[$currency]['available']*$percentToBuy*.01*10000000)/10000000;
 	$amtToTransfer=($accountsByCurrency[$currency]['available']*$percentToBuy*.01)/$avg;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$buyPrice=floor($avg*100)/100;
 		$params=[
-		    'size'       => $amtToTransfer,
-		    'price'      => $buyPrice,
+				'type'       => 'market',
+#		    'size'       => $amtToTransfer,
+#		    'price'      => $buyPrice,
+				'funds'      => $funds,
 		    'side'       => 'buy',
 		    'product_id' => 'LTC-'.$currency
 		];
@@ -32,8 +35,9 @@ function sell($avg) {
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$params=[
+				'type'       => 'market',
 		    'size'       => $amtToTransfer,
-		    'price'      => floor($avg*100)/100,
+#		    'price'      => floor($avg*100)/100,
 		    'side'       => 'sell',
 		    'product_id' => 'LTC-'.$currency
 		];
@@ -154,7 +158,7 @@ function placeOrder($params, $cash, $crypto) {
 	else {
 		try {
 			if ($activeTrade) {
-				$GLOBALS['client']->placeOrder($params);
+				$ret=$GLOBALS['client']->placeOrder($params);
 			}
 		}
 		catch(Exception $e) {
@@ -173,19 +177,15 @@ function runOne() {
 	$avg=$history[0][4]; // get current coin value;
 	$chandelierStop=$history[0][2]-$history[0][7]*$volatility; // high - ATR*volitility
 	$history[0][10]='';
-	$str.='Close: '.$avg
-		.', Chandelier Exit: '.sprintf('%.02f', $chandelierStop)
-		.', SMA Buy Short: '.sprintf('%.02f', $history[0][9][$smaBuyShort])
-		.', SMA Buy Long: '.sprintf('%.02f', $history[0][9][$smaBuyLong])
-		.', SMA Sell Short: '.sprintf('%.02f', $history[0][9][$smaSellShort])
-		.', SMA Sell Long: '.sprintf('%.02f', $history[0][9][$smaSellLong]);
+	$str.='Close:'.$avg
+		.', Chandelier:'.sprintf('%.02f', $chandelierStop)
+		.', SMA Buy:'.sprintf('%.02f', $history[0][9][$smaBuyShort]).'|'.sprintf('%.02f', $history[0][9][$smaBuyLong]).'|'.sprintf('%.02f', $history[0][9][$smaBuyLong]-$history[0][9][$smaBuyShort]);
 	if ($smaEmaMix&1) {
-		$str.=', EMA Buy Short: '.sprintf('%.02f', $history[0][11][$emaBuyShort])
-		.', EMA Buy Long: '.sprintf('%.02f', $history[0][11][$emaBuyLong]);
+		$str.=', EMA Buy:'.sprintf('%.02f', $history[0][11][$emaBuyShort]).'|'.sprintf('%.02f', $history[0][11][$emaBuyLong]).'|'.sprintf('%.02f', $history[0][11][$emaBuyLong]-$history[0][11][$emaBuyShort]);
 	}
+	$str.=', SMA Sell:'.sprintf('%.02f', $history[0][9][$smaSellShort]).'|'.sprintf('%.02f', $history[0][9][$smaSellLong]).'|'.sprintf('%.02f', $history[0][9][$smaSellLong]-$history[0][9][$smaSellShort]);
 	if ($smaEmaMix&2) {
-		$str.=', EMA Sell Short: '.sprintf('%.02f', $history[0][11][$emaSellShort])
-		.', EMA Sell Long: '.sprintf('%.02f', $history[0][11][$emaSellLong]);
+		$str.=', EMA Sell:'.sprintf('%.02f', $history[0][11][$emaSellShort]).'|'.sprintf('%.02f', $history[0][11][$emaSellLong]).'|'.sprintf('%.02f', $history[0][11][$emaSellLong]-$history[0][11][$emaSellShort]);
 	}
 	$str.="\n";
 	if ($avg<$chandelierStop) {
