@@ -8,6 +8,8 @@ copy config.php.dist to config.php and edit it to your taste. most of the settin
 set $activeSell to 0 if you want it to only tell you when it looks like a good time to buy or sell.
 set $activeSell to 1 if you want it to actually do the trade.
 
+create a data directory for holdings stats to record into.
+
 to run, "php run.php"
 
 ---

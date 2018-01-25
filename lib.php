@@ -94,7 +94,7 @@ function getProductHistoricRates($currency, $num) {
 				}
 				// { simple moving averages
 				for ($i=count($history)-2;$i>-1;--$i) {
-					for ($j=1;$j<=$smaBuyLongMax||$j<=$smaSellLongMax;++$j) {
+					for ($j=1;$j<=100;++$j) {
 						$history[$i][9][$j]=isset($history[$i+1][9][$j])
 							?($history[$i+1][9][$j]*($j-1)+$history[$i][3])/$j
 							:$history[$i][3];
@@ -105,12 +105,12 @@ function getProductHistoricRates($currency, $num) {
 				for ($i=count($history)-1;$i>-1;--$i) {
 					$history[$i][11]=[0];
 					if ($i==count($history)-1) {
-						for ($j=1; $j<=$emaBuyLongMax || $j<=$emaSellLongMax; ++$j) {
+						for ($j=1; $j<=100; ++$j) {
 							$history[$i][11][$j]=$history[$i][3];
 						}
 					}
 					else {
-						for ($j=1; $j<=$emaBuyLongMax || $j<=$emaSellLongMax; ++$j) {
+						for ($j=1; $j<=100; ++$j) {
 							$multiplier=2/($j+1);
 							$history[$i][11][$j]=
 								($history[$i][3] - $history[$i+1][11][$j])
@@ -148,7 +148,7 @@ function getProductHistoricRates($currency, $num) {
 function placeOrder($params, $cash, $crypto) {
 	global $activeTrade;
 	if (TEST) {
-		$fee=abs($cash)*.001;
+		$fee=abs($cash)*.003;
 		$currencies=explode('-', $params['product_id']);
 		$GLOBALS['accountsByCurrency'][$currencies[1]]['balance']+=$cash-$fee;
 		$GLOBALS['accountsByCurrency'][$currencies[1]]['available']+=$cash-$fee;
@@ -168,7 +168,7 @@ function placeOrder($params, $cash, $crypto) {
 	$GLOBALS['orderRecords'][]=$params;
 }
 function runOne() {
-	global $blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix;
+	global $blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell;
 	$str='';
 	$sell=0;
 	$buy=0;
@@ -188,46 +188,54 @@ function runOne() {
 		$str.=', EMA Sell:'.sprintf('%.02f', $history[0][11][$emaSellShort]).'|'.sprintf('%.02f', $history[0][11][$emaSellLong]).'|'.sprintf('%.02f', $history[0][11][$emaSellLong]-$history[0][11][$emaSellShort]);
 	}
 	$str.="\n";
-	if ($avg<$chandelierStop) {
-		$sell=sell($avg);
-		$str.='SELL: current close is lower than Chandelier Exit. Cut your losses and wait for the next Buy signal'."\n";
-		$history[0][10]='sell (Chandelier exit)';
+	$tradeMade=0;
+	if ($history[0][7]>=$tradeAtAtrSell) { // only allow trades if market is volatile enough to cover fees
+		if ($avg<$chandelierStop) {
+			$sell=sell($avg);
+			$str.='SELL: current close is lower than Chandelier Exit. Cut your losses and wait for the next Buy signal'."\n";
+			$history[0][10]='sell (Chandelier exit)';
+			$tradeMade=1;
+		}
+		else if (
+			$smaEmaMix&2 // use EMA for sells
+			&& $history[0][11][$emaSellShort]<$history[0][11][$emaSellLong]
+			&& $history[1][11][$emaSellShort]>=$history[1][11][$emaSellLong]
+		) { // MACD
+			$str.='SELL: the short/long term moving averages have crossed over. EMA Long is higher now'."\n";
+			$sell=sell($avg);
+			$history[0][10]='sell (EMA)';
+			$tradeMade=1;
+		}
+		else if (
+			$smaEmaMix&8 // use SMA for sells
+			&& $history[0][9][$smaSellShort]<$history[0][9][$smaSellLong]
+			&& $history[1][9][$smaSellShort]>=$history[1][9][$smaSellLong]
+		) { // MACD
+			$str.='SELL: the short/long term moving averages have crossed over. SMA Long is higher now'."\n";
+			$sell=sell($avg);
+			$history[0][10]='sell (SMA)';
+			$tradeMade=1;
+		}
 	}
-	else if (
-		$smaEmaMix&1 // use EMA for buys
-		&& $history[0][11][$emaBuyShort]>$history[0][11][$emaBuyLong]
-		&& $history[1][11][$emaBuyShort]<=$history[1][11][$emaBuyLong]
-	) { // EMA Crossover
-		$str.='BUY: the short/long term moving averages have crossed over. EMA Short is higher now'."\n";
-		$buy=buy($avg);
-		$history[0][10]='buy (EMA)';
-	}
-	else if (
-		$smaEmaMix&2 // use EMA for sells
-		&& $history[0][11][$emaSellShort]<$history[0][11][$emaSellLong]
-		&& $history[1][11][$emaSellShort]>=$history[1][11][$emaSellLong]
-	) { // MACD
-		$str.='SELL: the short/long term moving averages have crossed over. EMA Long is higher now'."\n";
-		$sell=sell($avg);
-		$history[0][10]='sell (EMA)';
-	}
-	else if (
-		$smaEmaMix&4 // use SMA for buys
-		&& $history[0][9][$smaBuyShort]>$history[0][9][$smaBuyLong]
-		&& $history[1][9][$smaBuyShort]<=$history[1][9][$smaBuyLong]
-	) { // MACD
-		$str.='BUY: the short/long term moving averages have crossed over. SMA Short is higher now'."\n";
-		$buy=buy($avg);
-		$history[0][10]='buy (SMA)';
-	}
-	else if (
-		$smaEmaMix&8 // use SMA for sells
-		&& $history[0][9][$smaSellShort]<$history[0][9][$smaSellLong]
-		&& $history[1][9][$smaSellShort]>=$history[1][9][$smaSellLong]
-	) { // MACD
-		$str.='SELL: the short/long term moving averages have crossed over. SMA Long is higher now'."\n";
-		$sell=sell($avg);
-		$history[0][10]='sell (SMA)';
+	if (!$tradeMade && $history[0][7]>=$tradeAtAtrBuy) { // only allow trades if market is volatile enough to cover fees
+		if (
+			$smaEmaMix&1 // use EMA for buys
+			&& $history[0][11][$emaBuyShort]>$history[0][11][$emaBuyLong]
+			&& $history[1][11][$emaBuyShort]<=$history[1][11][$emaBuyLong]
+		) { // EMA Crossover
+			$str.='BUY: the short/long term moving averages have crossed over. EMA Short is higher now'."\n";
+			$buy=buy($avg);
+			$history[0][10]='buy (EMA)';
+		}
+		else if (
+			$smaEmaMix&4 // use SMA for buys
+			&& $history[0][9][$smaBuyShort]>$history[0][9][$smaBuyLong]
+			&& $history[1][9][$smaBuyShort]<=$history[1][9][$smaBuyLong]
+		) { // MACD
+			$str.='BUY: the short/long term moving averages have crossed over. SMA Short is higher now'."\n";
+			$buy=buy($avg);
+			$history[0][10]='buy (SMA)';
+		}
 	}
 
 	$accountsByCurrency=getAccountsByCurrency();

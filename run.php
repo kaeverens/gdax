@@ -7,6 +7,7 @@ $smaSellLongMax=$smaSellLong;
 $emaBuyLongMax=$emaBuyLong;
 $emaSellLongMax=$emaSellLong;
 do {
+	require 'config.php'; // reload in case it was changed
 	$ret=runOne();
 	echo $ret['str'];
 	if ($ret['block'][10]) {
