@@ -6,19 +6,78 @@ use Hellovoid\Gdax\Client;
 $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
 $orderRecords=[];
+define('MAXAVGS', 150);
 
 function buy($avg) {
-	global $percentToBuy, $currency;
+	return buyLimit($avg);
+}
+function buyLimit($avg) {
+	global $currency, $activeTrade;
 	$accountsByCurrency=getAccountsByCurrency();
-	$funds=floor($accountsByCurrency[$currency]['available']*$percentToBuy*.01*10000000)/10000000;
-	$amtToTransfer=($accountsByCurrency[$currency]['available']*$percentToBuy*.01)/$avg;
+	$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*0.99)/$avg)*10000000)/10000000;
+	if ($amtToTransfer>=.1) {
+		$buyPrice=floor($avg*100)/100;
+		$params=[ // {
+				'type'       => 'limit',
+		    'size'       => $amtToTransfer,
+		    'price'      => $buyPrice,
+		    'side'       => 'buy',
+		    'product_id' => 'LTC-'.$currency
+		]; // }
+		if (!TEST && $activeTrade) {
+			try {
+				$orderId='';
+				$bought=0;
+				do {
+					$orderBook=0;
+					if ($orderId) { // check status of order
+						sleep(1); // give the thing time to trade
+						$order=$GLOBALS['client']->getOrder($orderId);
+						if (floatval($order['filled_size']!=0)) { // filled
+							$bought=1;
+						}
+						else { // if the market has moved up, then cancel the order and make a new one.
+							$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+							if ($buyPrice<floatval($orderBook['asks'][0][0])-.01) { // market price shifted upwards. cancel the order and make a new one
+								$ret=$GLOBALS['client']->orderCancel($orderId);
+								$orderId=0;
+							}
+						}
+					}
+					if (!$bought && !$orderId) {
+						if (!$orderBook) {
+							$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+						}
+						$buyPrice=floatval($orderBook['asks'][0][0])-.01;
+						$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*0.99)/$buyPrice)*10000000)/10000000;
+						$params['size']=sprintf('%0.08f', $amtToTransfer);
+						$params['price']=$buyPrice;
+						$order=placeOrder($params, -$amtToTransfer*$buyPrice, $amtToTransfer);
+						$orderId=$order['id'];
+					}
+				} while (!$bought);
+			}
+			catch (Exception $e) {
+				echo $e->getMessage()."\n";
+			}
+		}
+		else {
+			$ret=placeOrder($params, -$amtToTransfer*$buyPrice, $amtToTransfer);
+		}
+		return 1;
+	}
+	return 0;
+}
+function buyMarket($avg) {
+	global $currency;
+	$accountsByCurrency=getAccountsByCurrency();
+	$funds=floor($accountsByCurrency[$currency]['available']*.99*10000000)/10000000;
+	$amtToTransfer=($accountsByCurrency[$currency]['available']*.99)/$avg;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$buyPrice=floor($avg*100)/100;
 		$params=[
 				'type'       => 'market',
-#		    'size'       => $amtToTransfer,
-#		    'price'      => $buyPrice,
 				'funds'      => $funds,
 		    'side'       => 'buy',
 		    'product_id' => 'LTC-'.$currency
@@ -29,15 +88,66 @@ function buy($avg) {
 	return 0;
 }
 function sell($avg) {
-	global $percentToSell, $currency;
+	return sellLimit($avg);
+}
+function sellLimit($avg) {
+	global $currency, $activeTrade;
 	$accountsByCurrency=getAccountsByCurrency();
-	$amtToTransfer=$accountsByCurrency['LTC']['available']*$percentToSell*.01;
+	$amtToTransfer=floor($accountsByCurrency['LTC']['available']*0.99*10000000)/10000000;
+	if ($amtToTransfer>=.1) {
+		$params=[ // {
+				'type'       => 'limit',
+		    'size'       => $amtToTransfer,
+		    'price'      => floor($avg*100)/100,
+		    'side'       => 'sell',
+		    'product_id' => 'LTC-'.$currency
+		]; // }
+		if (!TEST && $activeTrade) {
+			$orderId='';
+			$sold=0;
+			do {
+				$orderBook=0;
+				if ($orderId) { // check status of order
+					sleep(1); // give the thing time to trade
+					$order=$GLOBALS['client']->getOrder($orderId);
+					if (floatval($order['filled_size']!=0)) { // filled
+						$sold=1;
+					}
+					else { // if the market has moved down, then cancel the order and make a new one.
+						$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+						if ($sellPrice>floatval($orderBook['asks'][0][0])+.01) { // market price shifted down. cancel the order and make a new one
+							$ret=$GLOBALS['client']->orderCancel($orderId);
+							$orderId=0;
+						}
+					}
+				}
+				if (!$sold && !$orderId) {
+					if (!$orderBook) {
+						$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+					}
+					$sellPrice=floatval($orderBook['bids'][0][0])+.01;
+					$params['price']=$sellPrice;
+					$order=placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
+					$orderId=$order['id'];
+				}
+			} while (!$sold);
+		}
+		else {
+			$ret=placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
+		}
+		return 1;
+	}
+	return 0;
+}
+function sellMarket($avg) {
+	global $currency;
+	$accountsByCurrency=getAccountsByCurrency();
+	$amtToTransfer=$accountsByCurrency['LTC']['available']*0.99;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$params=[
 				'type'       => 'market',
 		    'size'       => $amtToTransfer,
-#		    'price'      => floor($avg*100)/100,
 		    'side'       => 'sell',
 		    'product_id' => 'LTC-'.$currency
 		];
@@ -94,7 +204,7 @@ function getProductHistoricRates($currency, $num) {
 				}
 				// { simple moving averages
 				for ($i=count($history)-2;$i>-1;--$i) {
-					for ($j=1;$j<=100;++$j) {
+					for ($j=1;$j<=MAXAVGS;++$j) {
 						$history[$i][9][$j]=isset($history[$i+1][9][$j])
 							?($history[$i+1][9][$j]*($j-1)+$history[$i][3])/$j
 							:$history[$i][3];
@@ -105,12 +215,12 @@ function getProductHistoricRates($currency, $num) {
 				for ($i=count($history)-1;$i>-1;--$i) {
 					$history[$i][11]=[0];
 					if ($i==count($history)-1) {
-						for ($j=1; $j<=100; ++$j) {
+						for ($j=1; $j<=MAXAVGS; ++$j) {
 							$history[$i][11][$j]=$history[$i][3];
 						}
 					}
 					else {
-						for ($j=1; $j<=100; ++$j) {
+						for ($j=1; $j<=MAXAVGS; ++$j) {
 							$multiplier=2/($j+1);
 							$history[$i][11][$j]=
 								($history[$i][3] - $history[$i+1][11][$j])
@@ -147,8 +257,9 @@ function getProductHistoricRates($currency, $num) {
 }
 function placeOrder($params, $cash, $crypto) {
 	global $activeTrade;
+	$GLOBALS['orderRecords'][]=$params;
 	if (TEST) {
-		$fee=abs($cash)*.003;
+		$fee=abs($cash)*$GLOBALS['brokerFee']*.01;
 		$currencies=explode('-', $params['product_id']);
 		$GLOBALS['accountsByCurrency'][$currencies[1]]['balance']+=$cash-$fee;
 		$GLOBALS['accountsByCurrency'][$currencies[1]]['available']+=$cash-$fee;
@@ -159,16 +270,16 @@ function placeOrder($params, $cash, $crypto) {
 		try {
 			if ($activeTrade) {
 				$ret=$GLOBALS['client']->placeOrder($params);
+				return $ret;
 			}
 		}
 		catch(Exception $e) {
 			echo 'ERROR: '.$e->getMessage()."\n";
 		}
 	}
-	$GLOBALS['orderRecords'][]=$params;
 }
 function runOne() {
-	global $blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell;
+	global $blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory;
 	$str='';
 	$sell=0;
 	$buy=0;
@@ -189,7 +300,8 @@ function runOne() {
 	}
 	$str.="\n";
 	$tradeMade=0;
-	if ($history[0][7]>=$tradeAtAtrSell) { // only allow trades if market is volatile enough to cover fees
+
+	if ($history[0][7]/$avg>=$tradeAtAtrSell) { // only allow trades if market is volatile enough to cover fees
 		if ($avg<$chandelierStop) {
 			$sell=sell($avg);
 			$str.='SELL: current close is lower than Chandelier Exit. Cut your losses and wait for the next Buy signal'."\n";
@@ -217,7 +329,7 @@ function runOne() {
 			$tradeMade=1;
 		}
 	}
-	if (!$tradeMade && $history[0][7]>=$tradeAtAtrBuy) { // only allow trades if market is volatile enough to cover fees
+	if (!$tradeMade && $history[0][7]/$avg>=$tradeAtAtrBuy) { // only allow trades if market is volatile enough to cover fees
 		if (
 			$smaEmaMix&1 // use EMA for buys
 			&& $history[0][11][$emaBuyShort]>$history[0][11][$emaBuyLong]
@@ -226,6 +338,7 @@ function runOne() {
 			$str.='BUY: the short/long term moving averages have crossed over. EMA Short is higher now'."\n";
 			$buy=buy($avg);
 			$history[0][10]='buy (EMA)';
+			$tradeMade=1;
 		}
 		else if (
 			$smaEmaMix&4 // use SMA for buys
@@ -235,14 +348,18 @@ function runOne() {
 			$str.='BUY: the short/long term moving averages have crossed over. SMA Short is higher now'."\n";
 			$buy=buy($avg);
 			$history[0][10]='buy (SMA)';
+			$tradeMade=1;
 		}
 	}
-
 	$accountsByCurrency=getAccountsByCurrency();
 	$report=date('Y-m-d H:i:s', $history[0][0]) // {
 		.'	'.($accountsByCurrency[$currency]['balance']+($accountsByCurrency['LTC']['balance']*$avg))
 		.'	'.$accountsByCurrency[$currency]['balance']
-		.'	'.$accountsByCurrency['LTC']['balance']."\n"; // }
+		.'	'.$accountsByCurrency['LTC']['balance']
+		.'	'.$history[0][10]."\n"; // }
+	if ($tradeMade) {
+		$tradeHistory[]=$report;
+	}
 	return [
 		'str'=>$str,
 		'report'=>$report,

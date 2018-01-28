@@ -1,0 +1,128 @@
+<html>
+	<head>
+		<script src="https://www.amcharts.com/lib/3/amcharts.js"></script>
+		<script src="https://www.amcharts.com/lib/3/serial.js"></script>
+		<script src="https://www.amcharts.com/lib/3/themes/light.js"></script>
+		<script src="data/test-visualisation-data.js"></script>
+		<script src="data/test-visualisation-signals.js"></script>
+	</head>
+	<body>
+		<div id="chartdiv" style="height:100%"></div>
+		<script>
+			function getIndicatorImage(color, direction) {
+			  if (direction == "up") {
+			    return {
+			      "svgPath": triangle,
+			      "color": color,
+			      "width": 10,
+			      "height": 10,
+			      "rotation": 270,
+			      "offsetX": 5,
+			      "offsetY": 6
+			    };
+			  } else {
+			    return {
+			      "svgPath": triangle,
+			      "color": color,
+			      "width": 10,
+			      "height": 10,
+			      "rotation": 90,
+			      "offsetX": 5,
+			      "offsetY": -5
+			    };
+			  }
+			}
+			var bars=[];
+			for (var i=0;i<data.length;++i) {
+				bars.push({
+					'date':new Date(data[i][0]*1000),
+					'close':data[i][1]
+				});
+			}
+			for (var i=0;i<signals.length;++i) {
+				var d1=new Date(signals[i].initialDate*1000), d2=new Date((signals[i].initialDate+(60*60*24))*1000);
+				signals[i].initialDate=d1;
+				signals[i].finalDate=d1;
+				signals[i].finalValue=0;
+				if (signals[i].type=='buy') {
+					signals[i].lineColor='#0c0';
+					signals[i].initialImage=getIndicatorImage("#0c0", "up");
+					signals[i].lineThickness=2;
+				}
+				else {
+					signals[i].lineColor='#c00';
+					signals[i].initialImage=getIndicatorImage("#c00", "down");
+					signals[i].lineThickness=2;
+				}
+				delete signals[i].type;
+			}
+			console.log(signals);
+			var triangle = "M0,0 L0,2 L2,1 Z";
+			var chart = AmCharts.makeChart("chartdiv", {
+				"type": "serial",
+				"theme": "light",
+				"dataDateFormat": "YYYY-MM-DD HH:NN",
+				"valueAxes": [{
+					"position": "left"
+				}],
+				"graphs": [{
+					"id": "g1",
+					"lineColor": "#7f8da9",
+					"lineAlpha": 1,
+					"fillAlphas": 0,
+					"lineThickness": 2,
+					"negativeLineColor": "#db4c3c",
+					"title": "Price:",
+					"valueField": "close",
+				}],
+				"chartScrollbar": {
+					"graph": "g1",
+					"graphType": "line",
+					"scrollbarHeight": 30
+				},
+				"chartCursor": {},
+				"categoryField": "date",
+				"categoryAxis": {
+					"parseDates": true,
+					'minPeriod':'mm',
+					'equalSpacing':true
+				},
+				'trendLines':signals,
+				/* "trendLines": [{
+					"initialValue": 136.65,
+					"initialDate": "2011-08-02",
+					"finalValue": 136.65,
+					"finalDate": "2011-08-15",
+					"lineThickness": 2,
+					"lineColor": "#0c0",
+					"initialImage": getIndicatorImage("#0c0", "up")
+				}, {
+					"initialValue": 140,
+					"initialDate": "2011-08-18",
+					"finalValue": 140,
+					"finalDate": "2011-08-30",
+					"lineThickness": 2,
+					"lineColor": "#c00",
+					"initialImage": getIndicatorImage("#c00", "up")
+				}, {
+					"initialValue": 132,
+					"initialDate": "2011-09-10",
+					"finalValue": 132,
+					"finalDate": "2011-09-25",
+					"lineThickness": 2,
+					"lineColor": "#0c0",
+					"initialImage": getIndicatorImage("#0c0", "down")
+				}, {
+					"initialValue": 140,
+					"initialDate": "2011-09-14",
+					"finalValue": 140,
+					"finalDate": "2011-09-27",
+					"lineThickness": 2,
+					"lineColor": "#c00",
+					"initialImage": getIndicatorImage("#c00", "down")
+				}], */
+				'dataProvider':bars,
+			});
+		</script>
+	</body>
+</html>

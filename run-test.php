@@ -19,9 +19,6 @@ if (!defined('AUTOCONFIG')) {
 	$emaBuyShortMax=$emaBuyShort;
 	$emaBuyLongMin=$emaBuyLong;
 	$emaBuyLongMax=$emaBuyLong;
-	$sellMin=$percentToSell;
-	$sellMax=$percentToSell;
-	$sellInc= 0.1;
 	$volatilityMin=$volatility;
 	$volatilityMax=$volatility;
 	$blocksMin=$blocks;
@@ -46,8 +43,8 @@ foreach ($data['LTC-'.$currency] as $k=>$v) {
 }
 echo "calculating simple moving averages\n";
 foreach ($data['LTC-'.$currency] as $k=>$v) { // calculate moving averages
-	if ($k>100) {
-		for ($j=1; $j<=100; ++$j) {
+	if ($k>MAXAVGS) {
+		for ($j=1; $j<=MAXAVGS; ++$j) {
 			if (isset($data['LTC-'.$currency][$k-1][9][$j])) {
 				$data['LTC-'.$currency][$k][9][$j]=(
 					$data['LTC-'.$currency][$k-1][9][$j]
@@ -61,7 +58,7 @@ foreach ($data['LTC-'.$currency] as $k=>$v) { // calculate moving averages
 	}
 	else {
 		$data['LTC-'.$currency][$k][9]=[0];
-		for ($j=1; $j<=100; ++$j) {
+		for ($j=1; $j<=MAXAVGS; ++$j) {
 			$data['LTC-'.$currency][$k][9][$j]=$data['LTC-'.$currency][$k][3];
 		}
 	}
@@ -70,12 +67,12 @@ echo "calculating exponential moving averages\n";
 foreach ($data['LTC-'.$currency] as $k=>$v) { // calculate moving averages
 	$data['LTC-'.$currency][$k][11]=[0];
 	if ($k==0) {
-		for ($j=1; $j<=100; ++$j) {
+		for ($j=1; $j<=MAXAVGS; ++$j) {
 			$data['LTC-'.$currency][$k][11][$j]=$data['LTC-'.$currency][$k][3];
 		}
 	}
 	else {
-		for ($j=1; $j<=100; ++$j) {
+		for ($j=1; $j<=MAXAVGS; ++$j) {
 			$multiplier=2/($j+1);
 			$data['LTC-'.$currency][$k][11][$j]=
 				($data['LTC-'.$currency][$k][3] - $data['LTC-'.$currency][$k-1][11][$j])
@@ -90,11 +87,9 @@ $best=[
 
 function runTest() {
 	global
-		$blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $percentToSell, $percentToBuy, $tradeAtAtrBuy, $tradeAtAtrSell,
+		$blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory,
 		$smaEmaMixMin, $smaEmaMixMax,
 		$blocksMin, $blocksMax,
-		$sellMin, $sellMax, $sellInc,
-		$buyMin, $buyMax, $buyInc,
 		$volatilityMin, $volatilityMax, $volatilityInc,
 		$tradeAtAtrBuyMin, $tradeAtAtrBuyMax, $tradeAtAtrBuyInc,
 		$tradeAtAtrSellMin, $tradeAtAtrSellMax, $tradeAtAtrSellInc,
@@ -129,75 +124,70 @@ function runTest() {
 				$data['LTC-'.$currency][$i][8]=max($highs);
 			}
 			// }
-			for ($percentToSell=$sellMin; $percentToSell<=$sellMax;$percentToSell+=$sellInc) {
-				for ($percentToBuy=$buyMin; $percentToBuy<=$buyMax;$percentToBuy+=$buyInc) {
-					for ($tradeAtAtrSell=$tradeAtAtrSellMin; $tradeAtAtrSell<=$tradeAtAtrSellMax; $tradeAtAtrSell+=$tradeAtAtrSellInc) {
-						for ($tradeAtAtrBuy=$tradeAtAtrBuyMin; $tradeAtAtrBuy<=$tradeAtAtrBuyMax; $tradeAtAtrBuy+=$tradeAtAtrBuyInc) {
-							for ($volatility=$volatilityMin; $volatility<=$volatilityMax; $volatility+=$volatilityInc) {
-								for ($emaBuyLong=$emaBuyLongMin; $emaBuyLong<=$emaBuyLongMax; $emaBuyLong++) {
-									for ($emaBuyShort=$emaBuyShortMin; $emaBuyShort<$emaBuyLong && $emaBuyShort<=$emaBuyShortMax; $emaBuyShort++) {
-										for ($emaSellLong=$emaSellLongMin; $emaSellLong<=$emaSellLongMax; $emaSellLong++) {
-											for ($emaSellShort=$emaSellShortMin; $emaSellShort<$emaSellLong && $emaSellShort<=$emaSellShortMax; $emaSellShort++) {
-												for ($smaSellLong=$smaSellLongMin; $smaSellLong<=$smaSellLongMax; $smaSellLong++) {
-													for ($smaBuyLong=$smaBuyLongMin; $smaBuyLong<=$smaBuyLongMax; $smaBuyLong++) {
-														for ($smaBuyShort=$smaBuyShortMin; $smaBuyShort<$smaBuyLong && $smaBuyShort<=$smaBuyShortMax; $smaBuyShort++) {
-															for ($smaSellShort=$smaSellShortMin; $smaSellShort<$smaSellLong && $smaSellShort<=$smaSellShortMax; $smaSellShort++) {
-																$data_at=$data_start_at;
-																$orderRecords=[];
-																$GLOBALS['accountsByCurrency']=[ // {
-																	'LTC'=>[
-																		'balance'=>$startupLtc,
-																		'available'=>$startupLtc
-																	]
-																]; // }
-																$GLOBALS['accountsByCurrency'][$currency]=[
-																	'balance'=>$startupEur,
-																	'available'=>$startupEur
-																];
-																$sales=0;
-																$purchases=0;
-																do {
-																	$ret=runOne();
-																	$sales+=$ret['sell'];
-																	$purchases+=$ret['buy'];
-																	$go_again=1;
-																	if ($data_at==count($data['LTC-'.$currency])-1) {
-																		$go_again=0;
-																	}
-																	$block=$ret['block'];
-																	$bits=explode('	', trim($ret['report']));
-																} while ($go_again);
-																$current=[
-																	'percentToBuy'=>sprintf('%.2f', $percentToBuy),
-																	'percentToSell'=>sprintf('%.2f', $percentToSell),
-																	'blocks'=>$blocks,
-																	'volatility'=>sprintf('%.3f', $volatility),
-																	'smaEmaMix'=>$smaEmaMix,
-																	'smaBuyShort'=>intval($smaBuyShort),
-																	'smaBuyLong'=>intval($smaBuyLong),
-																	'smaSellShort'=>intval($smaSellShort),
-																	'smaSellLong'=>intval($smaSellLong),
-																	'emaBuyShort'=>intval($emaBuyShort),
-																	'emaBuyLong'=>intval($emaBuyLong),
-																	'emaSellShort'=>intval($emaSellShort),
-																	'emaSellLong'=>intval($emaSellLong),
-																	'sales'=>$sales,
-																	'purchases'=>$purchases,
-																	'tradeAtAtrBuy'=>sprintf('%.2f', $tradeAtAtrBuy),
-																	'tradeAtAtrSell'=>sprintf('%.2f', $tradeAtAtrSell),
-																	'holding'=>$bits[1],
-																];
-																if (floatval($bits[1])>$best['holding']) {
-																	$best=$current;
-																}
-																if (!AUTOCONFIG) {
-																	echo 'current   : '.json_encode($current)."\n";
-																	echo 'best found: '.json_encode($best)."\n";
-																}
-																else {
-																	echo '.';
-																}
+			for ($tradeAtAtrSell=$tradeAtAtrSellMin; $tradeAtAtrSell<=$tradeAtAtrSellMax; $tradeAtAtrSell+=$tradeAtAtrSellInc) {
+				for ($tradeAtAtrBuy=$tradeAtAtrBuyMin; $tradeAtAtrBuy<=$tradeAtAtrBuyMax; $tradeAtAtrBuy+=$tradeAtAtrBuyInc) {
+					for ($volatility=$volatilityMin; $volatility<=$volatilityMax; $volatility+=$volatilityInc) {
+						for ($emaBuyLong=$emaBuyLongMin; $emaBuyLong<=$emaBuyLongMax; $emaBuyLong++) {
+							for ($emaBuyShort=$emaBuyShortMin; $emaBuyShort<$emaBuyLong && $emaBuyShort<=$emaBuyShortMax; $emaBuyShort++) {
+								for ($emaSellLong=$emaSellLongMin; $emaSellLong<=$emaSellLongMax; $emaSellLong++) {
+									for ($emaSellShort=$emaSellShortMin; $emaSellShort<$emaSellLong && $emaSellShort<=$emaSellShortMax; $emaSellShort++) {
+										for ($smaSellLong=$smaSellLongMin; $smaSellLong<=$smaSellLongMax; $smaSellLong++) {
+											for ($smaBuyLong=$smaBuyLongMin; $smaBuyLong<=$smaBuyLongMax; $smaBuyLong++) {
+												for ($smaBuyShort=$smaBuyShortMin; $smaBuyShort<$smaBuyLong && $smaBuyShort<=$smaBuyShortMax; $smaBuyShort++) {
+													for ($smaSellShort=$smaSellShortMin; $smaSellShort<$smaSellLong && $smaSellShort<=$smaSellShortMax; $smaSellShort++) {
+														$data_at=$data_start_at;
+														$orderRecords=[];
+														$GLOBALS['accountsByCurrency']=[ // {
+															'LTC'=>[
+																'balance'=>$startupLtc,
+																'available'=>$startupLtc
+															]
+														]; // }
+														$GLOBALS['accountsByCurrency'][$currency]=[
+															'balance'=>$startupEur,
+															'available'=>$startupEur
+														];
+														$sales=0;
+														$purchases=0;
+														$tradeHistory=[];
+														do {
+															$ret=runOne();
+															$sales+=$ret['sell'];
+															$purchases+=$ret['buy'];
+															$go_again=1;
+															if ($data_at==count($data['LTC-'.$currency])-1) {
+																$go_again=0;
 															}
+															$block=$ret['block'];
+															$bits=explode('	', trim($ret['report']));
+														} while ($go_again);
+														$current=[
+															'blocks'=>$blocks,
+															'volatility'=>$volatility,
+															'smaEmaMix'=>$smaEmaMix,
+															'smaBuyShort'=>intval($smaBuyShort),
+															'smaBuyLong'=>intval($smaBuyLong),
+															'smaSellShort'=>intval($smaSellShort),
+															'smaSellLong'=>intval($smaSellLong),
+															'emaBuyShort'=>intval($emaBuyShort),
+															'emaBuyLong'=>intval($emaBuyLong),
+															'emaSellShort'=>intval($emaSellShort),
+															'emaSellLong'=>intval($emaSellLong),
+															'sales'=>$sales,
+															'purchases'=>$purchases,
+															'tradeAtAtrBuy'=>$tradeAtAtrBuy,
+															'tradeAtAtrSell'=>$tradeAtAtrSell,
+															'holding'=>$bits[1],
+														];
+														if (floatval($bits[1])>$best['holding']) {
+															$best=$current;
+														}
+														if (!AUTOCONFIG) {
+															echo 'current   : '.json_encode($current)."\n";
+															echo 'best found: '.json_encode($best)."\n";
+														}
+														else {
+															echo '.';
 														}
 													}
 												}

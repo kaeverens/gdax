@@ -5,27 +5,27 @@ $apiSecret='';
 
 $currency       = 'EUR';
 
-$activeTrade    =  0;
-$smaEmaMix      = 15;
-$tradeAtAtrBuy  =  1.86;
-$tradeAtAtrSell =  1.35;
-$blocks         = 13;
-$volatility     =  5.09;
-$smaBuyShort    = 21;
-$smaBuyLong     = 31;
-$smaSellShort   = 27;
-$smaSellLong    = 50;
-$emaBuyShort    = 60;
-$emaBuyLong     = 66;
-$emaSellShort   = 57;
-$emaSellLong    = 65;
-$percentToSell  = 98.98;
-$percentToBuy   = 98.94;
+$activeTrade    =   0;
+$smaEmaMix      =  15;
+$tradeAtAtrBuy  =   0.000475;
+$tradeAtAtrSell =   0.00010000;
+$blocks         =  30;
+$volatility     =   4.91079250;
+$smaBuyShort    =  18;
+$smaBuyLong     =  25;
+$smaSellShort   =  48;
+$smaSellLong    =  52;
+$emaBuyShort    =  53;
+$emaBuyLong     = 100;
+$emaSellShort   =  89;
+$emaSellLong    =  91;
 
 
 // the following are used in the autoconfig script
 
-$startupEur=20;
+$startupEur=1000000;
 $startupLtc=0; // $startupEur/1000;
 $smaEmaMixMin=15;
 $smaEmaMixMax=15;
+$brokerFee=0.03; // broker fee in percent
+$displayPrecision=8;
