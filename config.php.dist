@@ -2,15 +2,15 @@
 $apiPassphrase='';
 $apiKey='';
 $apiSecret='';
+$activeTrade    =   0;
 
 $currency       = 'EUR';
 
-$activeTrade    =   0;
 $smaEmaMix      =  15;
-$tradeAtAtrBuy  =   0.000475;
-$tradeAtAtrSell =   0.00010000;
+$tradeAtAtrBuy  =   0.00043256;
+$tradeAtAtrSell =   0.00005;
 $blocks         =  30;
-$volatility     =   4.91079250;
+$volatility     =   4.91179250;
 $smaBuyShort    =  18;
 $smaBuyLong     =  25;
 $smaSellShort   =  48;
@@ -27,5 +27,6 @@ $startupEur=1000000;
 $startupLtc=0; // $startupEur/1000;
 $smaEmaMixMin=15;
 $smaEmaMixMax=15;
-$brokerFee=0.03; // broker fee in percent
+$brokerFee=0.017647; // broker fee in percent 0.3/17
 $displayPrecision=8;
+$limitTradeOffset=0.01;

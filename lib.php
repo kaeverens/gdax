@@ -19,8 +19,8 @@ function buyLimit($avg) {
 		$buyPrice=floor($avg*100)/100;
 		$params=[ // {
 				'type'       => 'limit',
-		    'size'       => $amtToTransfer,
-		    'price'      => $buyPrice,
+		    'size'       => sprintf('%0.08f', $amtToTransfer),
+		    'price'      => sprintf('%0.08f', $buyPrice),
 		    'side'       => 'buy',
 		    'product_id' => 'LTC-'.$currency
 		]; // }
@@ -51,7 +51,7 @@ function buyLimit($avg) {
 						$buyPrice=floatval($orderBook['asks'][0][0])-.01;
 						$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*0.99)/$buyPrice)*10000000)/10000000;
 						$params['size']=sprintf('%0.08f', $amtToTransfer);
-						$params['price']=$buyPrice;
+						$params['price']=sprintf('%0.08f', $buyPrice);
 						$order=placeOrder($params, -$amtToTransfer*$buyPrice, $amtToTransfer);
 						$orderId=$order['id'];
 					}
@@ -62,7 +62,7 @@ function buyLimit($avg) {
 			}
 		}
 		else {
-			$ret=placeOrder($params, -$amtToTransfer*$buyPrice, $amtToTransfer);
+			$ret=placeOrder($params, -$amtToTransfer*($buyPrice+$GLOBALS['limitTradeOffset']), $amtToTransfer);
 		}
 		return 1;
 	}
@@ -126,14 +126,14 @@ function sellLimit($avg) {
 						$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
 					}
 					$sellPrice=floatval($orderBook['bids'][0][0])+.01;
-					$params['price']=$sellPrice;
+					$params['price']=sprintf('%0.08f', $sellPrice);
 					$order=placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
 					$orderId=$order['id'];
 				}
 			} while (!$sold);
 		}
 		else {
-			$ret=placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
+			$ret=placeOrder($params, $amtToTransfer*($avg-$GLOBALS['limitTradeOffset']), -$amtToTransfer);
 		}
 		return 1;
 	}

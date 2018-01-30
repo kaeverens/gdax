@@ -72,13 +72,13 @@ $blocksMin=$blocks;
 $blocksMax=$blocks;
 $volatilityMin=$volatility;
 $volatilityMax=$volatility;
-$volatilityInc= 0.01;
+$volatilityInc= 0.001;
 $tradeAtAtrBuyMin=$tradeAtAtrBuy;
 $tradeAtAtrBuyMax=$tradeAtAtrBuy;
-$tradeAtAtrBuyInc= 0.0001;
+$tradeAtAtrBuyInc= 0.00001;
 $tradeAtAtrSellMin=$tradeAtAtrSell;
 $tradeAtAtrSellMax=$tradeAtAtrSell;
-$tradeAtAtrSellInc= 0.0001;
+$tradeAtAtrSellInc= 0.00001;
 // }
 // { show current calculation values
 $tradeHistory=[];
@@ -134,10 +134,10 @@ do { // run tests to find new values
 	// }
 	// { blocks/volatility
 	echo "will changing the blocks and volatility (".$blocks.', '.sprintf('%0.0'.$displayPrecision.'f', $volatility)."%) work better...\n  ";
-	$blocksMin=$blocks-3;
-	$blocksMax=$blocks+3;
-	$volatilityMin=$volatility-$volatilityInc*3;
-	$volatilityMax=$volatility+$volatilityInc*3;
+	$blocksMin=$blocks-4;
+	$blocksMax=$blocks+4;
+	$volatilityMin=$volatility-$volatilityInc*4;
+	$volatilityMax=$volatility+$volatilityInc*4;
 	if ($blocksMin<2) {
 		$blocksMin=2;
 	}
@@ -163,8 +163,8 @@ do { // run tests to find new values
 	echo "will changing the SMA Buy short/long values (".$smaBuyShort.", ".$smaBuyLong.") work better...\n  ";
 	$smaBuyShortMin=$smaBuyShort-4;
 	$smaBuyShortMax=$smaBuyShort+4;
-	$smaBuyLongMin=$smaBuyLong-6;
-	$smaBuyLongMax=$smaBuyLong+6;
+	$smaBuyLongMin=$smaBuyLong-7;
+	$smaBuyLongMax=$smaBuyLong+7;
 	if ($smaBuyShortMin<2) {
 		$smaBuyShortMin=2;
 	}
@@ -197,8 +197,8 @@ do { // run tests to find new values
 	echo "will changing the SMA Sell short/long values (".$smaSellShort.", ".$smaSellLong.") work better...\n  ";
 	$smaSellShortMin=$smaSellShort-4;
 	$smaSellShortMax=$smaSellShort+4;
-	$smaSellLongMin=$smaSellLong-6;
-	$smaSellLongMax=$smaSellLong+6;
+	$smaSellLongMin=$smaSellLong-7;
+	$smaSellLongMax=$smaSellLong+7;
 	if ($smaSellShortMin<2) {
 		$smaSellShortMin=2;
 	}
@@ -231,8 +231,8 @@ do { // run tests to find new values
 	echo "will changing the EMA Buy short/long values (".$emaBuyShort.", ".$emaBuyLong.") work better...\n  ";
 	$emaBuyShortMin=$emaBuyShort-4;
 	$emaBuyShortMax=$emaBuyShort+4;
-	$emaBuyLongMin=$emaBuyLong-6;
-	$emaBuyLongMax=$emaBuyLong+6;
+	$emaBuyLongMin=$emaBuyLong-7;
+	$emaBuyLongMax=$emaBuyLong+7;
 	if ($emaBuyShortMin<2) {
 		$emaBuyShortMin=2;
 	}
@@ -265,8 +265,8 @@ do { // run tests to find new values
 	echo "will changing the EMA Sell short/long values (".$emaSellShort.", ".$emaSellLong.") work better...\n  ";
 	$emaSellShortMin=$emaSellShort-4;
 	$emaSellShortMax=$emaSellShort+4;
-	$emaSellLongMin=$emaSellLong-6;
-	$emaSellLongMax=$emaSellLong+6;
+	$emaSellLongMin=$emaSellLong-7;
+	$emaSellLongMax=$emaSellLong+7;
 	if ($emaSellShortMin<2) {
 		$emaSellShortMin=2;
 	}
