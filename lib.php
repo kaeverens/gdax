@@ -3,10 +3,14 @@ require_once 'config.php';
 require_once 'vendor/autoload.php';
 use Hellovoid\Gdax\Configuration;
 use Hellovoid\Gdax\Client;
+use GuzzleHttp\Psr7;
+use GuzzleHttp\Exception\RequestException;
+
 $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
 $orderRecords=[];
 define('MAXAVGS', 150);
+$argvHasBeenRun=0;
 
 function buy($avg) {
 	return buyLimit($avg);
@@ -57,7 +61,7 @@ function buyLimit($avg) {
 					}
 				} while (!$bought);
 			}
-			catch (Exception $e) {
+			catch (TransferException $e) {
 				echo $e->getMessage()."\n";
 			}
 		}
@@ -167,7 +171,7 @@ function getAccountsByCurrency() {
 				$accounts=$GLOBALS['client']->getAccounts();
 				$ok=1;
 			}
-			catch (Exception $e) {
+			catch (TransferException $e) {
 				echo $e->getMessage()."\n";
 				echo "will try again in 10s\n";
 				sleep(10);
@@ -246,7 +250,7 @@ function getProductHistoricRates($currency, $num) {
 				array_splice($history, $num);
 				$done=1;
 			}
-			catch (Exception $e) {
+			catch (TransferException $e) {
 				echo $e->getMessage()."\n";
 				echo "will try again in 10s\n";
 				sleep(10);
@@ -273,13 +277,13 @@ function placeOrder($params, $cash, $crypto) {
 				return $ret;
 			}
 		}
-		catch(Exception $e) {
+		catch(TransferException $e) {
 			echo 'ERROR: '.$e->getMessage()."\n";
 		}
 	}
 }
 function runOne() {
-	global $blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory;
+	global $blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $argvHasBeenRun;
 	$str='';
 	$sell=0;
 	$buy=0;
@@ -288,6 +292,19 @@ function runOne() {
 	$avg=$history[0][4]; // get current coin value;
 	$chandelierStop=$history[0][2]-$history[0][7]*$volatility; // high - ATR*volitility
 	$history[0][10]='';
+	if (!$argvHasBeenRun) {
+		if (isset($GLOBALS['argv'][1])) {
+			switch ($GLOBALS['argv'][1]) {
+				case 'buy': // {
+					buy($avg);
+				break; // }
+				case 'sell': // {
+					sell($avg);
+				break; // }
+			}
+		}
+		$argvHasBeenRun=1;
+	}
 	$str.='Close:'.$avg
 		.', Chandelier:'.sprintf('%.02f', $chandelierStop)
 		.', SMA Buy:'.sprintf('%.02f', $history[0][9][$smaBuyShort]).'|'.sprintf('%.02f', $history[0][9][$smaBuyLong]).'|'.sprintf('%.02f', $history[0][9][$smaBuyLong]-$history[0][9][$smaBuyShort]);

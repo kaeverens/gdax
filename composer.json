@@ -1,5 +1,6 @@
 {
     "require": {
-        "hellovoid/gdax": "^1.0"
+        "hellovoid/gdax": "^1.0",
+        "guzzlehttp/guzzle": "^6.3"
     }
 }
