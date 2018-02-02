@@ -2,23 +2,25 @@
 $apiPassphrase='';
 $apiKey='';
 $apiSecret='';
-$activeTrade    =   0;
 
-$currency       = 'EUR';
+$currency         = 'EUR';
 
-$smaEmaMix      =  15;
-$tradeAtAtrBuy  =   0.00043256;
-$tradeAtAtrSell =   0.00005;
-$blocks         =  30;
-$volatility     =   4.91179250;
-$smaBuyShort    =  18;
-$smaBuyLong     =  25;
-$smaSellShort   =  48;
-$smaSellLong    =  52;
-$emaBuyShort    =  53;
-$emaBuyLong     = 100;
-$emaSellShort   =  89;
-$emaSellLong    =  91;
+$activeTrade      =   0;
+$smaEmaMix        =  15;
+
+$stopGainMultiplier = 2.78300000;
+$tradeAtAtrBuy    =   0.00045146;
+$tradeAtAtrSell   =   0.00017500;
+$blocks           =  27;
+$volatility       =   4.89571250;
+$smaBuyShort      =  15;
+$smaBuyLong       =  16;
+$smaSellShort     =  43;
+$smaSellLong      =  48;
+$emaBuyShort      =  50;
+$emaBuyLong       =  91;
+$emaSellShort     =  35;
+$emaSellLong      =  40;
 
 
 // the following are used in the autoconfig script

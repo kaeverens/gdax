@@ -1,6 +1,6 @@
 <?php
 function resetVals($newBest) {
-	global $smaBuyShort, $smaBuyLong, $smaSellShort, $smaSellLong, $emaBuyShort, $emaBuyLong, $emaSellShort, $emaSellLong, $blocks, $volatility, $tradeAtAtrBuy, $tradeAtAtrSell;
+	global $smaBuyShort, $smaBuyLong, $smaSellShort, $smaSellLong, $emaBuyShort, $emaBuyLong, $emaSellShort, $emaSellLong, $blocks, $volatility, $tradeAtAtrBuy, $tradeAtAtrSell, $stopGainMultiplier;
 	$blocks=0+$newBest['blocks'];
 	$tradeAtAtrBuy=0+$newBest['tradeAtAtrBuy'];
 	$tradeAtAtrSell=0+$newBest['tradeAtAtrSell'];
@@ -13,6 +13,7 @@ function resetVals($newBest) {
 	$emaBuyLong=0+$newBest['emaBuyLong'];
 	$emaSellShort=0+$newBest['emaSellShort'];
 	$emaSellLong=0+$newBest['emaSellLong'];
+	$stopGainMultiplier=0+$newBest['stopGainMultiplier'];
 }
 function getLatestResults() {
 	global $days, $currency, $startupEur, $best, $displayPrecision;
@@ -79,6 +80,9 @@ $tradeAtAtrBuyInc= 0.00001;
 $tradeAtAtrSellMin=$tradeAtAtrSell;
 $tradeAtAtrSellMax=$tradeAtAtrSell;
 $tradeAtAtrSellInc= 0.00001;
+$stopGainMultiplierMin=$stopGainMultiplier;
+$stopGainMultiplierMax=$stopGainMultiplier;
+$stopGainMultiplierInc=0.1;
 // }
 // { show current calculation values
 $tradeHistory=[];
@@ -92,10 +96,30 @@ echo "about to start running tests. please note that there are a LOT of calculat
 // }
 do { // run tests to find new values
 	$improved=0;
+	// { stopGainMultiplier
+	echo 'will changing the stop-gain multiplier ('.sprintf('%0.0'.$displayPrecision.'f', $stopGainMultiplier).") work better...\n  ";
+	$stopGainMultiplierMin=$stopGainMultiplier-$stopGainMultiplierInc*5;
+	$stopGainMultiplierMax=$stopGainMultiplier+$stopGainMultiplierInc*5;
+	$newBest=runTest();
+	resetVals($newBest);
+	if ($newBest['holding']>$best['holding']) {
+		$best=$newBest;
+		$bestTradeHistory=$tradeHistory;
+		$improved=true;
+		echo ' YES (new value '.sprintf('%0.0'.$displayPrecision.'f', $stopGainMultiplier).")\n".getLatestResults();
+		$stopGainMultiplierInc*=1.1;
+	}
+	else {
+		echo " no\n";
+		$stopGainMultiplierInc*=0.5;
+	}
+	$stopGainMultiplierMin=$stopGainMultiplier;
+	$stopGainMultiplierMax=$stopGainMultiplier;
+	// }
 	// { trade at ATR Buy
 	echo "will changing the trade-at ATR Buy limit (".sprintf('%0.0'.$displayPrecision.'f', $tradeAtAtrBuy).") work better...\n  ";
-	$tradeAtAtrBuyMin=$tradeAtAtrBuy-$tradeAtAtrBuyInc*5;
-	$tradeAtAtrBuyMax=$tradeAtAtrBuy+$tradeAtAtrBuyInc*5;
+	$tradeAtAtrBuyMin=$tradeAtAtrBuy-$tradeAtAtrBuyInc*3;
+	$tradeAtAtrBuyMax=$tradeAtAtrBuy+$tradeAtAtrBuyInc*3;
 	$newBest=runTest();
 	resetVals($newBest);
 	if ($newBest['holding']>$best['holding']) {
@@ -114,8 +138,8 @@ do { // run tests to find new values
 	// }
 	// { trade at ATR Sell
 	echo "will changing the trade-at ATR Sell limit (".sprintf('%0.0'.$displayPrecision.'f', $tradeAtAtrSell).") work better...\n  ";
-	$tradeAtAtrSellMin=$tradeAtAtrSell-$tradeAtAtrSellInc*5;
-	$tradeAtAtrSellMax=$tradeAtAtrSell+$tradeAtAtrSellInc*5;
+	$tradeAtAtrSellMin=$tradeAtAtrSell-$tradeAtAtrSellInc*3;
+	$tradeAtAtrSellMax=$tradeAtAtrSell+$tradeAtAtrSellInc*3;
 	$newBest=runTest();
 	resetVals($newBest);
 	if ($newBest['holding']>$best['holding']) {
@@ -134,10 +158,10 @@ do { // run tests to find new values
 	// }
 	// { blocks/volatility
 	echo "will changing the blocks and volatility (".$blocks.', '.sprintf('%0.0'.$displayPrecision.'f', $volatility)."%) work better...\n  ";
-	$blocksMin=$blocks-4;
-	$blocksMax=$blocks+4;
-	$volatilityMin=$volatility-$volatilityInc*4;
-	$volatilityMax=$volatility+$volatilityInc*4;
+	$blocksMin=$blocks-1;
+	$blocksMax=$blocks+1;
+	$volatilityMin=$volatility-$volatilityInc*3;
+	$volatilityMax=$volatility+$volatilityInc*3;
 	if ($blocksMin<2) {
 		$blocksMin=2;
 	}
@@ -163,8 +187,8 @@ do { // run tests to find new values
 	echo "will changing the SMA Buy short/long values (".$smaBuyShort.", ".$smaBuyLong.") work better...\n  ";
 	$smaBuyShortMin=$smaBuyShort-4;
 	$smaBuyShortMax=$smaBuyShort+4;
-	$smaBuyLongMin=$smaBuyLong-7;
-	$smaBuyLongMax=$smaBuyLong+7;
+	$smaBuyLongMin=$smaBuyLong-8;
+	$smaBuyLongMax=$smaBuyLong+8;
 	if ($smaBuyShortMin<2) {
 		$smaBuyShortMin=2;
 	}
@@ -197,8 +221,8 @@ do { // run tests to find new values
 	echo "will changing the SMA Sell short/long values (".$smaSellShort.", ".$smaSellLong.") work better...\n  ";
 	$smaSellShortMin=$smaSellShort-4;
 	$smaSellShortMax=$smaSellShort+4;
-	$smaSellLongMin=$smaSellLong-7;
-	$smaSellLongMax=$smaSellLong+7;
+	$smaSellLongMin=$smaSellLong-8;
+	$smaSellLongMax=$smaSellLong+8;
 	if ($smaSellShortMin<2) {
 		$smaSellShortMin=2;
 	}
@@ -231,8 +255,8 @@ do { // run tests to find new values
 	echo "will changing the EMA Buy short/long values (".$emaBuyShort.", ".$emaBuyLong.") work better...\n  ";
 	$emaBuyShortMin=$emaBuyShort-4;
 	$emaBuyShortMax=$emaBuyShort+4;
-	$emaBuyLongMin=$emaBuyLong-7;
-	$emaBuyLongMax=$emaBuyLong+7;
+	$emaBuyLongMin=$emaBuyLong-8;
+	$emaBuyLongMax=$emaBuyLong+8;
 	if ($emaBuyShortMin<2) {
 		$emaBuyShortMin=2;
 	}
@@ -265,8 +289,8 @@ do { // run tests to find new values
 	echo "will changing the EMA Sell short/long values (".$emaSellShort.", ".$emaSellLong.") work better...\n  ";
 	$emaSellShortMin=$emaSellShort-4;
 	$emaSellShortMax=$emaSellShort+4;
-	$emaSellLongMin=$emaSellLong-7;
-	$emaSellLongMax=$emaSellLong+7;
+	$emaSellLongMin=$emaSellLong-8;
+	$emaSellLongMax=$emaSellLong+8;
 	if ($emaSellShortMin<2) {
 		$emaSellShortMin=2;
 	}
@@ -295,6 +319,73 @@ do { // run tests to find new values
 	$emaSellLongMin=$emaSellLong;
 	$emaSellLongMax=$emaSellLong;
 	// }
+	if (0) { // test all
+	echo "will changing everything, just a bit, work better...\n  ";
+	$stopGainMultiplierMin=$stopGainMultiplier-$stopGainMultiplierInc;
+	$stopGainMultiplierMax=$stopGainMultiplier+$stopGainMultiplierInc;
+	$tradeAtAtrBuyMin=$tradeAtAtrBuy-$tradeAtAtrBuyInc;
+	$tradeAtAtrBuyMax=$tradeAtAtrBuy+$tradeAtAtrBuyInc;
+	$tradeAtAtrSellMin=$tradeAtAtrSell-$tradeAtAtrSellInc;
+	$tradeAtAtrSellMax=$tradeAtAtrSell+$tradeAtAtrSellInc;
+	$blocksMin=$blocks-1;
+	$blocksMax=$blocks+1;
+	$volatilityMin=$volatility-$volatilityInc*1;
+	$volatilityMax=$volatility+$volatilityInc*1;
+	$smaBuyShortMin=$smaBuyShort-1;
+	$smaBuyShortMax=$smaBuyShort+1;
+	$smaBuyLongMin=$smaBuyLong-1;
+	$smaBuyLongMax=$smaBuyLong+1;
+	$smaSellShortMin=$smaSellShort-1;
+	$smaSellShortMax=$smaSellShort+1;
+	$smaSellLongMin=$smaSellLong-1;
+	$smaSellLongMax=$smaSellLong+1;
+	$emaBuyShortMin=$emaBuyShort-1;
+	$emaBuyShortMax=$emaBuyShort+1;
+	$emaBuyLongMin=$emaBuyLong-1;
+	$emaBuyLongMax=$emaBuyLong+1;
+	$emaSellShortMin=$emaSellShort-1;
+	$emaSellShortMax=$emaSellShort+1;
+	$emaSellLongMin=$emaSellLong-1;
+	$emaSellLongMax=$emaSellLong+1;
+	$newBest=runTest();
+	resetVals($newBest);
+	if ($newBest['holding']>$best['holding']) {
+		$best=$newBest;
+		$bestTradeHistory=$tradeHistory;
+		$improved=true;
+		echo " YES\n".getLatestResults();
+		echo "	best config:\n	".json_encode($best)."\n";
+	}
+	else {
+		echo " no\n";
+	}
+	$stopGainMultiplierMin=$stopGainMultiplier;
+	$stopGainMultiplierMax=$stopGainMultiplier;
+	$tradeAtAtrBuyMin=$tradeAtAtrBuy;
+	$tradeAtAtrBuyMax=$tradeAtAtrBuy;
+	$tradeAtAtrSellMin=$tradeAtAtrSell;
+	$tradeAtAtrSellMax=$tradeAtAtrSell;
+	$blocksMin=$blocks;
+	$blocksMax=$blocks;
+	$volatilityMin=$volatility;
+	$volatilityMax=$volatility;
+	$smaBuyShortMin=$smaBuyShort;
+	$smaBuyShortMax=$smaBuyShort;
+	$smaBuyLongMin=$smaBuyLong;
+	$smaBuyLongMax=$smaBuyLong;
+	$smaSellShortMin=$smaSellShort;
+	$smaSellShortMax=$smaSellShort;
+	$smaSellLongMin=$smaSellLong;
+	$smaSellLongMax=$smaSellLong;
+	$emaBuyShortMin=$emaBuyShort;
+	$emaBuyShortMax=$emaBuyShort;
+	$emaBuyLongMin=$emaBuyLong;
+	$emaBuyLongMax=$emaBuyLong;
+	$emaSellShortMin=$emaSellShort;
+	$emaSellShortMax=$emaSellShort;
+	$emaSellLongMin=$emaSellLong;
+	$emaSellLongMax=$emaSellLong;
+	}
 } while($improved);
 // { record final decisions to file
 echo "finished running autoconfig\n";
