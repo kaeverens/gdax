@@ -40,16 +40,21 @@ function buyLimit($avg) {
 					$orderBook=0;
 					if ($orderId) { // check status of order
 						sleep(1); // give the thing time to trade
-						$order=$GLOBALS['client']->getOrder($orderId);
-						if (floatval($order['filled_size']!=0)) { // filled
-							$bought=1;
-						}
-						else { // if the market has moved up, then cancel the order and make a new one.
-							$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
-							if ($buyPrice<floatval($orderBook['asks'][0][0])-.01) { // market price shifted upwards. cancel the order and make a new one
-								$ret=$GLOBALS['client']->orderCancel($orderId);
-								$orderId=0;
+						try {
+							$order=$GLOBALS['client']->getOrder($orderId);
+							if (floatval($order['filled_size']!=0)) { // filled
+								$bought=1;
 							}
+							else { // if the market has moved up, then cancel the order and make a new one.
+								$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+								if ($buyPrice<floatval($orderBook['asks'][0][0])-.01) { // market price shifted upwards. cancel the order and make a new one
+									$ret=$GLOBALS['client']->orderCancel($orderId);
+									$orderId=0;
+								}
+							}
+						}
+						catch (ClientException $e) {
+							echo $e->getMessage()."\n";
 						}
 					}
 					if (!$bought && !$orderId) {
@@ -65,7 +70,7 @@ function buyLimit($avg) {
 					}
 				} while (!$bought);
 			}
-			catch (TransferException $e) {
+			catch (ClientException $e) {
 				echo $e->getMessage()."\n";
 			}
 		}
@@ -115,32 +120,42 @@ function sellLimit($avg) {
 		if (!TEST && $activeTrade) {
 			$orderId='';
 			$sold=0;
-			do {
-				$orderBook=0;
-				if ($orderId) { // check status of order
-					sleep(1); // give the thing time to trade
-					$order=$GLOBALS['client']->getOrder($orderId);
-					if (floatval($order['filled_size']!=0)) { // filled
-						$sold=1;
-					}
-					else { // if the market has moved down, then cancel the order and make a new one.
-						$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
-						if ($sellPrice>floatval($orderBook['asks'][0][0])+.01) { // market price shifted down. cancel the order and make a new one
-							$ret=$GLOBALS['client']->orderCancel($orderId);
-							$orderId=0;
+			try {
+				do {
+					$orderBook=0;
+					if ($orderId) { // check status of order
+						sleep(1); // give the thing time to trade
+						try {
+							$order=$GLOBALS['client']->getOrder($orderId);
+							if (floatval($order['filled_size']!=0)) { // filled
+								$sold=1;
+							}
+							else { // if the market has moved down, then cancel the order and make a new one.
+								$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+								if ($sellPrice>floatval($orderBook['asks'][0][0])+.01) { // market price shifted down. cancel the order and make a new one
+									$ret=$GLOBALS['client']->orderCancel($orderId);
+									$orderId=0;
+								}
+							}
+						}
+						catch (ClientException $e) {
+							echo $e->getMessage()."\n";
 						}
 					}
-				}
-				if (!$sold && !$orderId) {
-					if (!$orderBook) {
-						$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+					if (!$sold && !$orderId) {
+						if (!$orderBook) {
+							$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
+						}
+						$sellPrice=floatval($orderBook['bids'][0][0])+.01;
+						$params['price']=sprintf('%0.08f', $sellPrice);
+						$order=placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
+						$orderId=$order['id'];
 					}
-					$sellPrice=floatval($orderBook['bids'][0][0])+.01;
-					$params['price']=sprintf('%0.08f', $sellPrice);
-					$order=placeOrder($params, $amtToTransfer*$avg, -$amtToTransfer);
-					$orderId=$order['id'];
-				}
-			} while (!$sold);
+				} while (!$sold);
+			}
+			catch (ClientException $e) {
+				echo $e->getMessage()."\n";
+			}
 		}
 		else {
 			$ret=placeOrder($params, $amtToTransfer*($avg-$GLOBALS['limitTradeOffset']), -$amtToTransfer);
@@ -177,7 +192,7 @@ function getAccountsByCurrency() {
 				$accounts=$GLOBALS['client']->getAccounts();
 				$ok=1;
 			}
-			catch (TransferException $e) {
+			catch (ClientException $e) {
 				echo $e->getMessage()."\n";
 				echo "will try again in 10s\n";
 				sleep(10);
@@ -257,7 +272,7 @@ function getProductHistoricRates($currency, $num) {
 				array_splice($history, $num);
 				$done=1;
 			}
-			catch (TransferException $e) {
+			catch (ClientException $e) {
 				echo $e->getMessage()."\n";
 				echo "will try again in 10s\n";
 				sleep(10);
@@ -284,7 +299,7 @@ function placeOrder($params, $cash, $crypto) {
 				return $ret;
 			}
 		}
-		catch(TransferException $e) {
+		catch(ClientException $e) {
 			echo 'ERROR: '.$e->getMessage()."\n";
 		}
 	}

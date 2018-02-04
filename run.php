@@ -7,6 +7,9 @@ $smaSellLongMax=$smaSellLong;
 $emaBuyLongMax=$emaBuyLong;
 $emaSellLongMax=$emaSellLong;
 $tradeHistory=[];
+if (!file_exists('data')) {
+	mkdir('data');
+}
 do {
 	$ret=runOne();
 	echo $ret['str'];
