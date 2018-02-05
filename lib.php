@@ -3,24 +3,19 @@ require_once 'config.php';
 require_once 'vendor/autoload.php';
 use Hellovoid\Gdax\Configuration;
 use Hellovoid\Gdax\Client;
-use GuzzleHttp\Psr7;
-use GuzzleHttp\Exception\RequestException;
+use Hellovoid\Gdax\Exception;
 
 $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
 $orderRecords=[];
 define('MAXAVGS', 150);
 $argvHasBeenRun=0;
-$lastBuy=0;
 
 function buy($avg) {
 	return buyLimit($avg);
 }
 function buyLimit($avg) {
-	global $currency, $activeTrade, $lastBuy;
-	if ($lastBuy) { // already bought
-		return 0;
-	}
+	global $currency, $activeTrade;
 	$accountsByCurrency=getAccountsByCurrency();
 	$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*0.99)/$avg)*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
@@ -53,7 +48,7 @@ function buyLimit($avg) {
 								}
 							}
 						}
-						catch (ClientException $e) {
+						catch (HttpException $e) {
 							echo $e->getMessage()."\n";
 						}
 					}
@@ -70,14 +65,13 @@ function buyLimit($avg) {
 					}
 				} while (!$bought);
 			}
-			catch (ClientException $e) {
+			catch (HttpException $e) {
 				echo $e->getMessage()."\n";
 			}
 		}
 		else {
 			$ret=placeOrder($params, -$amtToTransfer*($buyPrice+$GLOBALS['limitTradeOffset']), $amtToTransfer);
 		}
-		$lastBuy=$buyPrice;
 		return 1;
 	}
 	return 0;
@@ -105,8 +99,7 @@ function sell($avg) {
 	return sellLimit($avg);
 }
 function sellLimit($avg) {
-	global $currency, $activeTrade, $lastBuy;
-	$lastBuy=0;
+	global $currency, $activeTrade;
 	$accountsByCurrency=getAccountsByCurrency();
 	$amtToTransfer=floor($accountsByCurrency['LTC']['available']*0.99*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
@@ -138,7 +131,7 @@ function sellLimit($avg) {
 								}
 							}
 						}
-						catch (ClientException $e) {
+						catch (HttpException $e) {
 							echo $e->getMessage()."\n";
 						}
 					}
@@ -153,7 +146,7 @@ function sellLimit($avg) {
 					}
 				} while (!$sold);
 			}
-			catch (ClientException $e) {
+			catch (HttpException $e) {
 				echo $e->getMessage()."\n";
 			}
 		}
@@ -192,7 +185,7 @@ function getAccountsByCurrency() {
 				$accounts=$GLOBALS['client']->getAccounts();
 				$ok=1;
 			}
-			catch (ClientException $e) {
+			catch (HttpException $e) {
 				echo $e->getMessage()."\n";
 				echo "will try again in 10s\n";
 				sleep(10);
@@ -272,7 +265,7 @@ function getProductHistoricRates($currency, $num) {
 				array_splice($history, $num);
 				$done=1;
 			}
-			catch (ClientException $e) {
+			catch (HttpException $e) {
 				echo $e->getMessage()."\n";
 				echo "will try again in 10s\n";
 				sleep(10);
@@ -299,13 +292,13 @@ function placeOrder($params, $cash, $crypto) {
 				return $ret;
 			}
 		}
-		catch(ClientException $e) {
+		catch(HttpException $e) {
 			echo 'ERROR: '.$e->getMessage()."\n";
 		}
 	}
 }
 function runOne() {
-	global $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $argvHasBeenRun, $lastBuy, $stopGainMultiplier, $stopGain;
+	global $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $argvHasBeenRun, $stopGainMultiplier, $stopGain;
 	$str='';
 	$sell=0;
 	$buy=0;
@@ -347,7 +340,7 @@ function runOne() {
 		$history[0][10]='sell (stopGain)';
 		$tradeMade=1;
 	}
-	else if ($avg<=$chandelierStop) {
+	else if ($chandelierStop && $avg<=$chandelierStop) {
 		$sell=sell($avg);
 		$str.='SELL: current close is lower than Chandelier Exit. Cut your losses and wait for the next Buy signal'."\n";
 		$history[0][10]='sell (Chandelier exit)';
