@@ -8,7 +8,7 @@ use Hellovoid\Gdax\Exception;
 $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
 $orderRecords=[];
-define('MAXAVGS', 150);
+define('MAXAVGS', 100);
 $argvHasBeenRun=0;
 
 function buy($avg) {

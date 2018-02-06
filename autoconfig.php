@@ -45,6 +45,9 @@ for ($j=$lines-(60*24*31);$j>MAXAVGS;--$j) {
 		$earliest=$j;
 	}
 }
+if ($earliest<200) {
+	$earliest=200;
+}
 if ($earliest) {
 	$days=($lines-$earliest)/60/24;
 	echo "testing will start from line ".$earliest." (value: ".$data['LTC-'.$currency][$earliest][1]."), which was ".sprintf('%0.2f', $days)." days before the last line\n";

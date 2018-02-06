@@ -5,20 +5,20 @@ $apiSecret='';
 
 $currency         = 'EUR';
 
-$activeTrade      =   0;
+$activeTrade      =   1;
 $smaEmaMix        =  15;
 
-$stopGainMultiplier = 2.78300000;
-$tradeAtAtrBuy    =   0.00045146;
-$tradeAtAtrSell   =   0.00017500;
-$blocks           =  27;
-$volatility       =   4.89571250;
-$smaBuyShort      =  15;
-$smaBuyLong       =  16;
-$smaSellShort     =  43;
-$smaSellLong      =  48;
-$emaBuyShort      =  50;
-$emaBuyLong       =  91;
+$stopGainMultiplier = 3.02050000;
+$tradeAtAtrBuy    =   0.00045366;
+$tradeAtAtrSell   =   0.00017850;
+$blocks           =  29;
+$volatility       =   4.88641250;
+$smaBuyShort      =  13;
+$smaBuyLong       =  23;
+$smaSellShort     =  25;
+$smaSellLong      =  27;
+$emaBuyShort      =  41;
+$emaBuyLong       =  45;
 $emaSellShort     =  35;
 $emaSellLong      =  40;
 
