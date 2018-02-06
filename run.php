@@ -22,5 +22,5 @@ do {
 		}
 	}
 	file_put_contents('data/holdings.tsv', $ret['report'], FILE_APPEND);
-	sleep(60);
+	sleep(5);
 } while (1);

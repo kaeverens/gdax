@@ -212,6 +212,9 @@ function getProductHistoricRates($currency, $num) {
 		do {
 			try {
 				$history=$GLOBALS['client']->getProductHistoricRates($currency);
+				$tick=$GLOBALS['client']->getProductTicker($currency);
+				$val=floatval($tick['price']);
+				array_unshift($history, [time(), min($val, $history[0][1]), max($val, $history[0][2]), $history[0][4], $val, $history[0][5]]);
 				for ($i=0;$i<count($history)-1;++$i) { // calculate true range
 					$m1=abs($history[$i][2]-$history[$i][1]);
 					$m2=abs($history[$i][2]-$history[$i+1][4]);
@@ -225,8 +228,8 @@ function getProductHistoricRates($currency, $num) {
 				for ($i=count($history)-2;$i>-1;--$i) {
 					for ($j=1;$j<=MAXAVGS;++$j) {
 						$history[$i][9][$j]=isset($history[$i+1][9][$j])
-							?($history[$i+1][9][$j]*($j-1)+$history[$i][3])/$j
-							:$history[$i][3];
+							?($history[$i+1][9][$j]*($j-1)+$history[$i][4])/$j
+							:$history[$i][4];
 					}
 				}
 				// }
@@ -235,14 +238,14 @@ function getProductHistoricRates($currency, $num) {
 					$history[$i][11]=[0];
 					if ($i==count($history)-1) {
 						for ($j=1; $j<=MAXAVGS; ++$j) {
-							$history[$i][11][$j]=$history[$i][3];
+							$history[$i][11][$j]=$history[$i][4];
 						}
 					}
 					else {
 						for ($j=1; $j<=MAXAVGS; ++$j) {
 							$multiplier=2/($j+1);
 							$history[$i][11][$j]=
-								($history[$i][3] - $history[$i+1][11][$j])
+								($history[$i][4] - $history[$i+1][11][$j])
 								* $multiplier+$history[$i+1][11][$j];
 						}
 					}
