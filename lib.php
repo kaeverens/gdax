@@ -213,7 +213,8 @@ function getProductHistoricRates($currency, $num) {
 			try {
 				$history=$GLOBALS['client']->getProductHistoricRates($currency);
 				$tick=$GLOBALS['client']->getProductTicker($currency);
-				array_unshift($history, [time(), floatval($tick['price']), $history[0][2], $history[0][3], $history[0][4], $history[0][5]]);
+				$val=floatval($tick['price']);
+				array_unshift($history, [time(), min($val, $history[0][1]), max($val, $history[0][2]), $history[0][4], $val, $history[0][5]]);
 				for ($i=0;$i<count($history)-1;++$i) { // calculate true range
 					$m1=abs($history[$i][2]-$history[$i][1]);
 					$m2=abs($history[$i][2]-$history[$i+1][4]);
