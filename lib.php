@@ -228,8 +228,8 @@ function getProductHistoricRates($currency, $num) {
 				for ($i=count($history)-2;$i>-1;--$i) {
 					for ($j=1;$j<=MAXAVGS;++$j) {
 						$history[$i][9][$j]=isset($history[$i+1][9][$j])
-							?($history[$i+1][9][$j]*($j-1)+$history[$i][3])/$j
-							:$history[$i][3];
+							?($history[$i+1][9][$j]*($j-1)+$history[$i][4])/$j
+							:$history[$i][4];
 					}
 				}
 				// }
@@ -238,14 +238,14 @@ function getProductHistoricRates($currency, $num) {
 					$history[$i][11]=[0];
 					if ($i==count($history)-1) {
 						for ($j=1; $j<=MAXAVGS; ++$j) {
-							$history[$i][11][$j]=$history[$i][3];
+							$history[$i][11][$j]=$history[$i][4];
 						}
 					}
 					else {
 						for ($j=1; $j<=MAXAVGS; ++$j) {
 							$multiplier=2/($j+1);
 							$history[$i][11][$j]=
-								($history[$i][3] - $history[$i+1][11][$j])
+								($history[$i][4] - $history[$i+1][11][$j])
 								* $multiplier+$history[$i+1][11][$j];
 						}
 					}
