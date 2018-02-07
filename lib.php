@@ -337,7 +337,7 @@ function runOne() {
 	$tradeMade=0;
 
 	// { sell
-	if ($stopGain && $history[0][2]>=$stopGain) { // high in last minute triggered the stopGain
+	if ($stopGain && $avg>=$stopGain) {
 		$sell=sell($avg);
 		$str.='SELL: stopGain triggered'."\n";
 		$history[0][10]='sell (stopGain)';
