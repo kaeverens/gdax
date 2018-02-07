@@ -4,6 +4,8 @@ require_once 'vendor/autoload.php';
 use Hellovoid\Gdax\Configuration;
 use Hellovoid\Gdax\Client;
 use Hellovoid\Gdax\Exception;
+use Hellovoid\Gdax\Exception\HttpException;
+
 
 $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
