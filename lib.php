@@ -11,7 +11,7 @@ $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
 $orderRecords=[];
 define('MAXAVGS', 100);
-define('TRADEFACTOR', 1);
+define('TRADEFACTOR', 0.99);
 $argvHasBeenRun=0;
 
 function buy($avg) {
@@ -207,11 +207,14 @@ function getProductHistoricRates($currency, $num) {
 	global $blocks, $emaBuyLongMax, $emaSellLongMax, $smaBuyLongMax, $smaSellLongMax;
 	if (TEST) {
 		$GLOBALS['data_at']++;
-		$history=array_reverse(array_slice($GLOBALS['data'][$currency], $GLOBALS['data_at']-$num, $num));
-#		$history=[];
-#		for ($i=0;$i<$num;++$i) {
-#			$history[]=$GLOBALS['data'][$currency][$GLOBALS['data_at']-$i];
-#		}
+		if (!isset($GLOBALS['rollingHistory'][0])) {
+			$GLOBALS['rollingHistory']=array_reverse(array_slice($GLOBALS['data'][$currency], $GLOBALS['data_at']-$num, $num));
+		}
+		else {
+			array_pop($GLOBALS['rollingHistory']);
+			array_unshift($GLOBALS['rollingHistory'], $GLOBALS['data'][$currency][$GLOBALS['data_at']]);
+		}
+		return -1;
 	}
 	else {
 		do {
@@ -279,8 +282,8 @@ function getProductHistoricRates($currency, $num) {
 				sleep(10);
 			}
 		} while(!$done);
+		return $history;
 	}
-	return $history;
 }
 function placeOrder($params, $cash, $crypto) {
 	global $activeTrade;
@@ -312,6 +315,9 @@ function runOne() {
 	$buy=0;
 
 	$history=getProductHistoricRates('LTC-'.$currency, 200); // get some data
+	if ($history===-1) {
+		$history=$GLOBALS['rollingHistory'];
+	}
 	$avg=$history[0][4]; // get current coin value;
 	$chandelierStop=$history[0][2]-$history[0][7]*$volatility; // high - ATR*volitility
 	$history[0][10]='';
@@ -342,19 +348,13 @@ function runOne() {
 	$tradeMade=0;
 
 	// { sell
-	if ($stopGain && $avg>=$stopGain) {
-		$sell=sell($avg);
-		$str.='SELL: stopGain triggered'."\n";
-		$history[0][10]='sell (stopGain)';
-		$tradeMade=1;
-	}
-	else if ($chandelierStop && $avg<=$chandelierStop) {
+	if ($chandelierStop && $avg<=$chandelierStop) {
 		$sell=sell($avg);
 		$str.='SELL: current close is lower than Chandelier Exit. Cut your losses and wait for the next Buy signal'."\n";
 		$history[0][10]='sell (Chandelier exit)';
 		$tradeMade=1;
 	}
-	else if ($history[0][7]/$avg>=$tradeAtAtrSell) { // only allow trades if market is volatile enough to cover fees
+	if (!$tradeMade && $history[0][7]/$avg>=$tradeAtAtrSell) { // only allow trades if market is volatile enough to cover fees
 		if (
 			$smaEmaMix&2 // use EMA for sells
 			&& $history[0][11][$emaSellShort]<$history[0][11][$emaSellLong]
@@ -375,6 +375,12 @@ function runOne() {
 			$history[0][10]='sell (SMA)';
 			$tradeMade=1;
 		}
+	}
+	if (!$tradeMade && $stopGain && $avg>=$stopGain) {
+		$sell=sell($avg);
+		$str.='SELL: stopGain triggered'."\n";
+		$history[0][10]='sell (stopGain)';
+		$tradeMade=1;
 	}
 	// }
 	// { buy

@@ -156,6 +156,7 @@ function runTest() {
 															$sales=0;
 															$purchases=0;
 															$tradeHistory=[];
+															$GLOBALS['rollingHistory']=[];
 															do {
 																$ret=runOne();
 																$sales+=$ret['sell'];
