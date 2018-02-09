@@ -11,6 +11,7 @@ $configuration = Configuration::apiKey($apiKey, $apiSecret, $apiPassphrase);
 $client = Client::create($configuration);
 $orderRecords=[];
 define('MAXAVGS', 100);
+define('TRADEFACTOR', 1);
 $argvHasBeenRun=0;
 
 function buy($avg) {
@@ -19,7 +20,7 @@ function buy($avg) {
 function buyLimit($avg) {
 	global $currency, $activeTrade;
 	$accountsByCurrency=getAccountsByCurrency();
-	$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*0.99)/$avg)*10000000)/10000000;
+	$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*TRADEFACTOR)/$avg)*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$buyPrice=floor($avg*100)/100;
 		$params=[ // {
@@ -41,6 +42,7 @@ function buyLimit($avg) {
 							$order=$GLOBALS['client']->getOrder($orderId);
 							if (floatval($order['filled_size']!=0)) { // filled
 								$bought=1;
+								file_put_contents('data/trades', 'buy	'.($buyPrice-$avg)."\n", FILE_APPEND);
 							}
 							else { // if the market has moved up, then cancel the order and make a new one.
 								$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
@@ -59,7 +61,7 @@ function buyLimit($avg) {
 							$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
 						}
 						$buyPrice=floatval($orderBook['asks'][0][0])-.01;
-						$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*0.99)/$buyPrice)*10000000)/10000000;
+						$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*TRADEFACTOR)/$buyPrice)*10000000)/10000000;
 						$params['size']=sprintf('%0.08f', $amtToTransfer);
 						$params['price']=sprintf('%0.08f', $buyPrice);
 						$order=placeOrder($params, -$amtToTransfer*$buyPrice, $amtToTransfer);
@@ -81,8 +83,8 @@ function buyLimit($avg) {
 function buyMarket($avg) {
 	global $currency;
 	$accountsByCurrency=getAccountsByCurrency();
-	$funds=floor($accountsByCurrency[$currency]['available']*.99*10000000)/10000000;
-	$amtToTransfer=($accountsByCurrency[$currency]['available']*.99)/$avg;
+	$funds=floor($accountsByCurrency[$currency]['available']*TRADEFACTOR*10000000)/10000000;
+	$amtToTransfer=($accountsByCurrency[$currency]['available']*TRADEFACTOR)/$avg;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$buyPrice=floor($avg*100)/100;
@@ -103,7 +105,7 @@ function sell($avg) {
 function sellLimit($avg) {
 	global $currency, $activeTrade;
 	$accountsByCurrency=getAccountsByCurrency();
-	$amtToTransfer=floor($accountsByCurrency['LTC']['available']*0.99*10000000)/10000000;
+	$amtToTransfer=floor($accountsByCurrency['LTC']['available']*TRADEFACTOR*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$params=[ // {
 				'type'       => 'limit',
@@ -124,6 +126,7 @@ function sellLimit($avg) {
 							$order=$GLOBALS['client']->getOrder($orderId);
 							if (floatval($order['filled_size']!=0)) { // filled
 								$sold=1;
+								file_put_contents('data/trades', 'sell	'.($avg-$sellPrice)."\n", FILE_APPEND);
 							}
 							else { // if the market has moved down, then cancel the order and make a new one.
 								$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
@@ -162,7 +165,7 @@ function sellLimit($avg) {
 function sellMarket($avg) {
 	global $currency;
 	$accountsByCurrency=getAccountsByCurrency();
-	$amtToTransfer=$accountsByCurrency['LTC']['available']*0.99;
+	$amtToTransfer=$accountsByCurrency['LTC']['available']*TRADEFACTOR;
 	$amtToTransfer=floor($amtToTransfer*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
 		$params=[
