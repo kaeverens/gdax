@@ -185,7 +185,7 @@ function runTest() {
 																'tradeAtAtrBuy'=>$tradeAtAtrBuy,
 																'tradeAtAtrSell'=>$tradeAtAtrSell,
 																'stopGainMultiplier'=>$stopGainMultiplier,
-																'holding'=>$bits[1],
+																'holding'=>floatval($bits[1]),
 															];
 															if (floatval($bits[1])>$best['holding']) {
 																$best=$current;
