@@ -8,21 +8,19 @@ $currency         = 'EUR';
 $activeTrade      =   1;
 $smaEmaMix        =  15;
 
-$stopGainMultiplier = 2.64771094;
-$tradeAtAtrBuy    =   0.00089298;
-$tradeAtAtrSell   =   0.00026450;
-$blocks           =  24;
-$volatility       =   4.87389250;
-$smaBuyShort      =  21;
-$smaBuyLong       =  23;
-$smaSellShort     =  16;
-$smaSellLong      =  58;
-$emaBuyShort      =  36;
-$emaBuyLong       =  48;
-$emaSellShort     =  52;
-$emaSellLong      =  60;
-
-
+$tradeAtAtrBuy      =   0.00150720;
+$tradeAtAtrSell     =   0.00002000;
+$smaBuyShort        =  35;
+$smaBuyLong         =  62;
+$smaSellShort       =   2;
+$smaSellLong        =  35;
+$emaBuyShort        =  48;
+$emaBuyLong         =  51;
+$emaSellShort       =   7;
+$emaSellLong        =  37;
+$blocks             =   5;
+$stopLossMultiplier =   0.74055130;
+$stopGainMultiplier =   0.88581852;
 
 // the following are used in the autoconfig script
 

@@ -13,12 +13,14 @@ $orderRecords=[];
 define('MAXAVGS', 100);
 define('TRADEFACTOR', 0.99);
 $argvHasBeenRun=0;
+$lastBuy=0;
+$currentStopLoss=0;
 
 function buy($avg) {
 	return buyLimit($avg);
 }
 function buyLimit($avg) {
-	global $currency, $activeTrade;
+	global $currency, $activeTrade, $lastBuy;
 	$accountsByCurrency=getAccountsByCurrency();
 	$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*TRADEFACTOR)/$avg)*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
@@ -61,6 +63,9 @@ function buyLimit($avg) {
 							$orderBook=$GLOBALS['client']->getProductOrderBook('LTC-'.$currency, ['level'=>1]);
 						}
 						$buyPrice=floatval($orderBook['asks'][0][0])-.01;
+						if (abs($buyPrice-$avg)>.03) { // moved too far. abort! abort!
+							return 0;
+            }
 						$amtToTransfer=floor((($accountsByCurrency[$currency]['available']*TRADEFACTOR)/$buyPrice)*10000000)/10000000;
 						$params['size']=sprintf('%0.08f', $amtToTransfer);
 						$params['price']=sprintf('%0.08f', $buyPrice);
@@ -74,8 +79,9 @@ function buyLimit($avg) {
 			}
 		}
 		else {
-			$ret=placeOrder($params, -$amtToTransfer*($buyPrice+$GLOBALS['limitTradeOffset']), $amtToTransfer);
+			$ret=placeOrder($params, -$amtToTransfer*($buyPrice+$GLOBALS['buyOffset']), $amtToTransfer);
 		}
+		$lastBuy=$buyPrice;
 		return 1;
 	}
 	return 0;
@@ -103,7 +109,7 @@ function sell($avg) {
 	return sellLimit($avg);
 }
 function sellLimit($avg) {
-	global $currency, $activeTrade;
+	global $currency, $activeTrade, $lastBuy;
 	$accountsByCurrency=getAccountsByCurrency();
 	$amtToTransfer=floor($accountsByCurrency['LTC']['available']*TRADEFACTOR*10000000)/10000000;
 	if ($amtToTransfer>=.1) {
@@ -156,8 +162,9 @@ function sellLimit($avg) {
 			}
 		}
 		else {
-			$ret=placeOrder($params, $amtToTransfer*($avg-$GLOBALS['limitTradeOffset']), -$amtToTransfer);
+			$ret=placeOrder($params, $amtToTransfer*($avg-$GLOBALS['sellOffset']), -$amtToTransfer);
 		}
+		$lastBuy=0;
 		return 1;
 	}
 	return 0;
@@ -309,7 +316,7 @@ function placeOrder($params, $cash, $crypto) {
 	}
 }
 function runOne() {
-	global $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $argvHasBeenRun, $stopGainMultiplier, $stopGain;
+	global $stopLossMultiplier, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $argvHasBeenRun, $stopGainMultiplier, $currentStopLoss, $lastBuy, $holdings;
 	$str='';
 	$sell=0;
 	$buy=0;
@@ -319,7 +326,23 @@ function runOne() {
 		$history=$GLOBALS['rollingHistory'];
 	}
 	$avg=$history[0][4]; // get current coin value;
-	$chandelierStop=$history[0][2]-$history[0][7]*$volatility; // high - ATR*volitility
+	// { stopLoss
+	$newStopLoss=$history[0][2]-$history[0][7]*$stopLossMultiplier; // high - ATR*volitility
+	if ($lastBuy) {
+		if ($newStopLoss>$currentStopLoss) {
+			$stopLoss=$newStopLoss;
+			$currentStopLoss=$newStopLoss;
+		}
+		else {
+			$stopLoss=$currentStopLoss;
+		}
+	}
+	else {
+		$stopLoss=$newStopLoss;
+		$currentStopLoss=0;
+	}
+	// }
+	$stopGain=$history[0][1]+$history[0][7]*$stopGainMultiplier; // low + ATR*multiplier
 	$history[0][10]='';
 	if (!$argvHasBeenRun) {
 		if (isset($GLOBALS['argv'][1])) {
@@ -335,7 +358,7 @@ function runOne() {
 		$argvHasBeenRun=1;
 	}
 	$str.='Close:'.$avg
-		.', Chandelier:'.sprintf('%.02f', $chandelierStop)
+		.', StopLoss:'.sprintf('%.02f', $stopLoss)
 		.', SMA Buy:'.sprintf('%.02f', $history[0][9][$smaBuyShort]).'|'.sprintf('%.02f', $history[0][9][$smaBuyLong]).'|'.sprintf('%.02f', $history[0][9][$smaBuyLong]-$history[0][9][$smaBuyShort]);
 	if ($smaEmaMix&1) {
 		$str.=', EMA Buy:'.sprintf('%.02f', $history[0][11][$emaBuyShort]).'|'.sprintf('%.02f', $history[0][11][$emaBuyLong]).'|'.sprintf('%.02f', $history[0][11][$emaBuyLong]-$history[0][11][$emaBuyShort]);
@@ -348,10 +371,10 @@ function runOne() {
 	$tradeMade=0;
 
 	// { sell
-	if ($chandelierStop && $avg<=$chandelierStop) {
+	if ($stopLoss && $avg<=$stopLoss) {
 		$sell=sell($avg);
-		$str.='SELL: current close is lower than Chandelier Exit. Cut your losses and wait for the next Buy signal'."\n";
-		$history[0][10]='sell (Chandelier exit)';
+		$str.='SELL: current close is lower than StopLoss. Cut your losses and wait for the next Buy signal'."\n";
+		$history[0][10]='sell (StopLoss)';
 		$tradeMade=1;
 	}
 	if (!$tradeMade && $history[0][7]/$avg>=$tradeAtAtrSell) { // only allow trades if market is volatile enough to cover fees
@@ -408,7 +431,6 @@ function runOne() {
 	}
 	// }
 
-	$stopGain=$avg+$history[0][7]*$stopGainMultiplier; // low + ATR*multiplier
 	$accountsByCurrency=getAccountsByCurrency();
 	$report=date('Y-m-d H:i:s', $history[0][0]) // {
 		.'	'.($accountsByCurrency[$currency]['balance']+($accountsByCurrency['LTC']['balance']*$avg))
@@ -418,6 +440,7 @@ function runOne() {
 	if ($tradeMade) {
 		$tradeHistory[]=$report;
 	}
+	$holdings[]=($accountsByCurrency[$currency]['balance']+($accountsByCurrency['LTC']['balance']*$avg));
 	return [
 		'str'=>$str,
 		'report'=>$report,

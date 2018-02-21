@@ -19,8 +19,8 @@ if (!defined('AUTOCONFIG')) {
 	$emaBuyShortMax=$emaBuyShort;
 	$emaBuyLongMin=$emaBuyLong;
 	$emaBuyLongMax=$emaBuyLong;
-	$volatilityMin=$volatility;
-	$volatilityMax=$volatility;
+	$stopLossMultiplierMin=$stopLossMultiplier;
+	$stopLossMultiplierMax=$stopLossMultiplier;
 	$blocksMin=$blocks;
 	$blocksMax=$blocks;
 }
@@ -81,17 +81,18 @@ foreach ($data['LTC-'.$currency] as $k=>$v) { // calculate moving averages
 	}
 }
 $best=[
-	'holding'=>0
+	'holding'=>0,
+	'holdingsAvg'=>0
 ];
-$stopGainAt=0;
+$holdings=[];
 // }
 
 function runTest() {
 	global
-		$blocks, $volatility, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $stopGainMultiplier, $lastBuy,
+		$blocks, $stopLossMultiplier, $emaBuyShort, $emaSellShort, $emaBuyLong, $emaSellLong, $smaBuyShort, $smaSellShort, $smaBuyLong, $smaSellLong, $currency, $smaEmaMix, $tradeAtAtrBuy, $tradeAtAtrSell, $tradeHistory, $stopGainMultiplier, $lastBuy,
 		$smaEmaMixMin, $smaEmaMixMax,
 		$blocksMin, $blocksMax,
-		$volatilityMin, $volatilityMax, $volatilityInc,
+		$stopLossMultiplierMin, $stopLossMultiplierMax, $stopLossMultiplierInc,
 		$tradeAtAtrBuyMin, $tradeAtAtrBuyMax, $tradeAtAtrBuyInc,
 		$tradeAtAtrSellMin, $tradeAtAtrSellMax, $tradeAtAtrSellInc,
 		$emaBuyLongMin, $emaBuyLongMax,
@@ -104,7 +105,7 @@ function runTest() {
 		$smaSellShortMin, $smaSellShortMax,
 		$stopGainMultiplierMin, $stopGainMultiplierMax, $stopGainMultiplierInc,
 		$data_start_at, $data, $currency, $startupLtc, $startupEur, $data_at,
-		$stopGainAt;
+		$holdings;
 	$best=$GLOBALS['best'];
 
 	for ($smaEmaMix=$smaEmaMixMin; $smaEmaMix<=$smaEmaMixMax; ++$smaEmaMix) {
@@ -129,7 +130,7 @@ function runTest() {
 			// }
 			for ($tradeAtAtrSell=$tradeAtAtrSellMin; $tradeAtAtrSell<=$tradeAtAtrSellMax; $tradeAtAtrSell+=$tradeAtAtrSellInc) {
 				for ($tradeAtAtrBuy=$tradeAtAtrBuyMin; $tradeAtAtrBuy<=$tradeAtAtrBuyMax; $tradeAtAtrBuy+=$tradeAtAtrBuyInc) {
-					for ($volatility=$volatilityMin; $volatility<=$volatilityMax; $volatility+=$volatilityInc) {
+					for ($stopLossMultiplier=$stopLossMultiplierMin; $stopLossMultiplier<=$stopLossMultiplierMax; $stopLossMultiplier+=$stopLossMultiplierInc) {
 						for ($emaBuyLong=$emaBuyLongMin; $emaBuyLong<=$emaBuyLongMax; $emaBuyLong++) {
 							for ($emaBuyShort=$emaBuyShortMin; $emaBuyShort<$emaBuyLong && $emaBuyShort<=$emaBuyShortMax; $emaBuyShort++) {
 								for ($emaSellLong=$emaSellLongMin; $emaSellLong<=$emaSellLongMax; $emaSellLong++) {
@@ -139,7 +140,6 @@ function runTest() {
 												for ($smaBuyShort=$smaBuyShortMin; $smaBuyShort<$smaBuyLong && $smaBuyShort<=$smaBuyShortMax; $smaBuyShort++) {
 													for ($smaSellShort=$smaSellShortMin; $smaSellShort<$smaSellLong && $smaSellShort<=$smaSellShortMax; $smaSellShort++) {
 														for ($stopGainMultiplier=$stopGainMultiplierMin; $stopGainMultiplier<=$stopGainMultiplierMax; $stopGainMultiplier+=$stopGainMultiplierInc) {
-															$stopGainAt=0;
 															$lastBuy=0;
 															$data_at=$data_start_at;
 															$orderRecords=[];
@@ -156,6 +156,7 @@ function runTest() {
 															$sales=0;
 															$purchases=0;
 															$tradeHistory=[];
+															$holdings=[];
 															$GLOBALS['rollingHistory']=[];
 															do {
 																$ret=runOne();
@@ -168,9 +169,16 @@ function runTest() {
 																$block=$ret['block'];
 																$bits=explode('	', trim($ret['report']));
 															} while ($go_again);
+															$holdingsCount=count($holdings);
+															$holdingsLastVal=$holdings[$holdingsCount-1];
+															$holdingsPCs=[];
+															for ($i=1;$holdingsCount-$i*60*24>0;$i*=1.5) {
+																$holdingsPCs[]=100*pow($holdingsLastVal/$holdings[ceil($holdingsCount-$i*60*24)], 1/$i)-100;
+															}
+															$holdingsAvg=array_sum($holdingsPCs)/count($holdingsPCs);
 															$current=[
 																'blocks'=>$blocks,
-																'volatility'=>$volatility,
+																'stopLossMultiplier'=>$stopLossMultiplier,
 																'smaEmaMix'=>$smaEmaMix,
 																'smaBuyShort'=>intval($smaBuyShort),
 																'smaBuyLong'=>intval($smaBuyLong),
@@ -186,8 +194,9 @@ function runTest() {
 																'tradeAtAtrSell'=>$tradeAtAtrSell,
 																'stopGainMultiplier'=>$stopGainMultiplier,
 																'holding'=>floatval($bits[1]),
+																'holdingsAvg'=>$holdingsAvg
 															];
-															if (floatval($bits[1])>$best['holding']) {
+															if (!$best['holdingsAvg'] || $holdingsAvg>$best['holdingsAvg']) {
 																$best=$current;
 																if (AUTOCONFIG) {
 																	echo "\033[32mY\033[0m";
@@ -223,4 +232,3 @@ if (!AUTOCONFIG) {
 	$best=runTest();
 	echo 'best found: '.json_encode($best)."\n";
 }
-
